@@ -91,5 +91,6 @@ def rebuild_universe(name: str, *, data_dir: Path | None = None) -> int:
     memberships = snapshots_to_memberships(snapshots)
     path = universe_path(name, data_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
-    memberships_to_frame(memberships).write_parquet(path)
+    frame = memberships_to_frame(memberships).with_columns(pl.lit(name).alias("universe"))
+    frame.write_parquet(path)
     return len(memberships)

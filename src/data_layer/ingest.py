@@ -69,7 +69,8 @@ def ingest_universe(
     memberships = normalize_memberships(source.fetch(name))
     path = universe_path(name, data_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
-    memberships_to_frame(memberships).write_parquet(path)
+    frame = memberships_to_frame(memberships).with_columns(pl.lit(name).alias("universe"))
+    frame.write_parquet(path)
     log.info("universe ingested | name=%s rows=%d -> %s", name, len(memberships), path)
     return path
 
@@ -138,8 +139,11 @@ def ingest_prices(
             continue
         frames.append(bars.with_columns(pl.lit(ticker).alias("symbol")))
 
-    combined = pl.concat(frames) if frames else pl.DataFrame(schema=PRICE_SCHEMA)
-    out = normalize_prices(combined) if frames else combined
+    if frames:
+        combined = pl.concat(frames).with_columns(pl.lit(universe).alias("universe"))
+        out = normalize_prices(combined)
+    else:
+        out = pl.DataFrame(schema=PRICE_SCHEMA)
 
     path = prices_path(universe, data_dir)
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -33,7 +33,8 @@ def test_fdr_source_yields_null_close_raw() -> None:
 def test_fdr_source_frame_fits_price_schema_after_normalize() -> None:
     # ingest 의 normalize_prices 를 통과해 저장 스키마에 맞아야 한다(거래정지 플래그 포함)
     bars = FdrPriceSource(read_fn=_fake_read).fetch("005930", date(2024, 1, 1), date(2024, 1, 31))
-    out = normalize_prices(bars.with_columns(pl.lit("005930").alias("symbol")))
+    stamped = bars.with_columns(pl.lit("005930").alias("symbol"), pl.lit("kospi").alias("universe"))
+    out = normalize_prices(stamped)
     assert out.schema == pl.Schema(PRICE_SCHEMA)
     assert out["is_halted"].to_list() == [False, True]
 

@@ -7,7 +7,7 @@ kospi40 종목의 수정주가 OHLCV. 종목을 선택하세요.
 ```sql symbols
 select distinct symbol
 from quant.prices
-where filename like '%kospi40%'
+where universe = 'kospi40'
 order by symbol
 ```
 
@@ -16,7 +16,7 @@ order by symbol
 ```sql series
 select date, open, high, low, close, volume
 from quant.prices
-where symbol = '${inputs.symbol.value}' and filename like '%kospi40%'
+where symbol = '${inputs.symbol.value}' and universe = 'kospi40'
 order by date
 ```
 
@@ -33,7 +33,7 @@ order by date
 ```sql recent
 select date, open, high, low, close, volume
 from quant.prices
-where symbol = '${inputs.symbol.value}' and filename like '%kospi40%'
+where symbol = '${inputs.symbol.value}' and universe = 'kospi40'
 order by date desc
 limit 10
 ```

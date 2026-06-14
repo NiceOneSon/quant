@@ -20,8 +20,10 @@ import polars as pl
 from data_layer.universe import DEFAULT_DATA_DIR
 
 # 저장 스키마. 컬럼 순서·타입의 단일 출처.
+# universe = 어느 유니버스의 가격인지 구분 키(filename 대신 명시적 컬럼).
 PRICE_SCHEMA: dict[str, pl.DataType] = {
     "date": pl.Date(),
+    "universe": pl.String(),
     "symbol": pl.String(),
     "open": pl.Float64(),
     "high": pl.Float64(),

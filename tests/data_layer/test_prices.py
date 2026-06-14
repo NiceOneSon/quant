@@ -27,7 +27,8 @@ class _FakePriceSource:
 
 def test_normalize_prices_flags_halt_and_matches_schema() -> None:
     raw = _FakePriceSource().fetch("AAA", date(2020, 1, 1), date(2020, 1, 31))
-    out = normalize_prices(raw.with_columns(pl.lit("AAA").alias("symbol")))
+    stamped = raw.with_columns(pl.lit("AAA").alias("symbol"), pl.lit("u").alias("universe"))
+    out = normalize_prices(stamped)
     assert out.columns == list(PRICE_SCHEMA)
     assert out.schema == pl.Schema(PRICE_SCHEMA)
     assert out["is_halted"].to_list() == [False, True]
@@ -44,6 +45,7 @@ def test_ingest_load_roundtrip(tmp_path: Path) -> None:
     )
     df = load_prices("kospi200", data_dir=tmp_path)
 
+    assert set(df["universe"].to_list()) == {"kospi200"}  # 명시적 유니버스 키
     assert set(df["symbol"].unique().to_list()) == {"AAA", "BBB"}
     assert df.filter(pl.col("symbol") == "AAA").height == 2
     # 원본 종가가 함께 저장돼 수정계수(close/close_raw) 복원이 가능해야 한다
