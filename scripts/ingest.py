@@ -7,12 +7,15 @@
   # 2) 가격 — 유니버스 편입 이력 전체(상장폐지 포함)
   uv run python scripts/ingest.py --config configs/backtest.yaml --dataset prices --source fdr
   # 3) 무위험금리 (FRED)
-  uv run python scripts/ingest.py --config configs/backtest.yaml --dataset rates --source fred --series DGS10
-  # 4) 매크로/FX/원자재/지수 (ELT: raw date/value 적재 → dbt 가 메타데이터 조인)
-  #   FDR: FX('USD/KRW'), 지수('KS11', 'KS200', 'KQ11')
-  uv run python scripts/ingest.py --config configs/backtest.yaml --dataset macro --source fdr --series USD/KRW
-  #   FRED: DXY('DTWEXBGS'), WTI('DCOILWTICO'), 구리('PCOPPUSDM')
-  uv run python scripts/ingest.py --config configs/backtest.yaml --dataset macro --source fred --series DCOILWTICO
+  uv run python scripts/ingest.py --config configs/backtest.yaml \
+      --dataset rates --source fred --series DGS10
+  # 4) 매크로/FX/원자재/지수 (ELT: raw date/value → dbt 메타데이터 조인)
+  #   FDR: 'USD/KRW', 'KS11', 'KS200', 'KQ11'
+  uv run python scripts/ingest.py --config configs/backtest.yaml \
+      --dataset macro --source fdr --series USD/KRW
+  #   FRED: 'DTWEXBGS'(DXY), 'DCOILWTICO'(WTI), 'PCOPPUSDM'(구리)
+  uv run python scripts/ingest.py --config configs/backtest.yaml \
+      --dataset macro --source fred --series DCOILWTICO
 
 저장: 유니버스 → data/reference/universe/<universe>.parquet
       가격     → data/processed/prices/<universe>.parquet

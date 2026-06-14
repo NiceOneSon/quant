@@ -11,7 +11,7 @@ from pathlib import Path
 
 import polars as pl
 
-from data_layer.universe import DEFAULT_DATA_DIR, default_marts_dir
+from data_layer.universe import default_marts_dir
 
 
 def _parse(d: str | date) -> date:
