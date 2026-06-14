@@ -103,6 +103,20 @@ order by f.date
 
 ---
 
+## 한국 수출입 증감률 YoY
+
+```sql trade
+select f.date, d.label, f.value
+from quant.macro f
+join quant.macro_series d on f.sk_dim_macro_series = d.sk_id
+where d.category = 'trade'
+order by f.date
+```
+
+<LineChart data={trade} x=date y=value series=label title="한국 수출입 YoY (%)" yAxisTitle="%"/>
+
+---
+
 ## 인플레이션 / 매크로 지표
 
 ```sql inflation

@@ -79,5 +79,28 @@ models:
         data_tests: [not_null]
       - name: _membership_added
         description: >
-          편입 구간의 added 날짜. fct_prices 에서 sk_dim_universe = hash(universe, symbol, _added_str)
-          계산에만 사용. 소비자에게 노출하지 않음(접두사 _ 규약).
+          편입 구간의 added 날짜. (레거시 내부 컬럼 — fct_prices 가 sk_dim_universe_history 로
+          전환된 이후 실제로는 소비되지 않음. 접두사 _ 규약.)
+
+  - name: int_universe_history
+    description: >
+      SCD2 유니버스 타임라인 구간 생성 소스.
+      멤버십 구간(is_member=true) + 편입 전 갭(is_member=false) + 재편입 갭(is_member=false)을
+      합쳐 (universe, symbol) 쌍의 전체 날짜 범위를 빈틈없이 커버한다.
+      dim_universe_history 의 직접 소스.
+    columns:
+      - name: universe
+        description: "유니버스 식별자."
+        data_tests: [not_null]
+      - name: symbol
+        description: "KRX 6자리 상장코드."
+        data_tests: [not_null]
+      - name: valid_from
+        description: >
+          구간 시작일(포함). 편입 전 갭은 sentinel 값 1900-01-01 사용.
+        data_tests: [not_null]
+      - name: valid_to
+        description: "구간 종료일(미포함). null 이면 현재 활성."
+      - name: is_member
+        description: "true = 실제 편입 구간, false = 갭(편입 전·재편입 공백)."
+        data_tests: [not_null]

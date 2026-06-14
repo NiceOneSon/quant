@@ -21,6 +21,9 @@ DHHNGSP,천연가스,USD/MMBtu,NA,commodity,fred
 PCOPPUSDM,구리 현물가,USD/MT,NA,commodity,fred
 Gold,금 (LBMA 오후가),USD/troy oz,NA,commodity,fdr
 SLV,은 ETF (iShares SLV),USD,NA,commodity,fdr
+HG=F,구리 선물 (COMEX 일별),USD/lb,NA,commodity,fdr
 KS11,KOSPI 지수,point,KR,index,fdr
 KS200,KOSPI200 지수,point,KR,index,fdr
 KQ11,KOSDAQ 지수,point,KR,index,fdr
+XTEXVA01KRM659S,한국 수출 증감률 YoY,%,KR,trade,fred
+XTIMVA01KRM659S,한국 수입 증감률 YoY,%,KR,trade,fred

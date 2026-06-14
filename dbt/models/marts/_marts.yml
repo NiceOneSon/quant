@@ -101,12 +101,12 @@ models:
               arguments:
                 values: ["KR", "US", "JP", "CN", "EU", "NA"]
       - name: category
-        description: "카테고리(fx/macro/commodity/index/credit/volatility)."
+        description: "카테고리(fx/macro/commodity/index/credit/volatility/trade)."
         data_tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ["fx", "macro", "commodity", "index", "credit", "volatility"]
+                values: ["fx", "macro", "commodity", "index", "credit", "volatility", "trade"]
       - name: source
         description: "수집 소스(fdr/fred). ingest.py 배치 모드에서 참조."
         data_tests: [not_null]

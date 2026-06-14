@@ -4,29 +4,37 @@
 ) }}
 
 -- 일별 수정주가 OHLCV.
--- sk_dim_security: dim_security.sk_id 참조 (symbol 로 조인).
--- sk_dim_universe: dim_universe.sk_id 참조 (편입 구간 기준); 비편입 행은 null.
+-- sk_dim_security         → dim_security (symbol 기준).
+-- sk_dim_universe_history → dim_universe_history (범위 조인, 항상 non-null).
+--   멤버십 구간(is_member=true): 편입 기간 행.
+--   갭 구간(is_member=false) : 편입 전·재편입 공백 기간 행.
 with base as (
-    select *, cast(_membership_added as varchar) as _added_str
+    select *
     from {{ ref('int_prices_pit') }}
+),
+universe_hist as (
+    select sk_id, universe, symbol, valid_from, valid_to
+    from {{ ref('dim_universe_history') }}
 )
 select
-    {{ dbt_utils.generate_surrogate_key(['date', 'universe', 'symbol'])               }} as sk_id,
-    {{ dbt_utils.generate_surrogate_key(['symbol'])                                   }} as sk_dim_security,
-    case when _membership_added is not null
-        then {{ dbt_utils.generate_surrogate_key(['universe', 'symbol', '_added_str']) }}
-        else null
-    end                                                                                   as sk_dim_universe,
-    universe,
-    symbol,
-    date,
-    open,
-    high,
-    low,
-    close,
-    volume,
-    close_raw,
-    is_halted,
-    is_member_asof
+    {{ dbt_utils.generate_surrogate_key(['base.date', 'base.universe', 'base.symbol']) }} as sk_id,
+    {{ dbt_utils.generate_surrogate_key(['base.symbol'])                               }} as sk_dim_security,
+    uh.sk_id                                                                               as sk_dim_universe_history,
+    base.universe,
+    base.symbol,
+    base.date,
+    base.open,
+    base.high,
+    base.low,
+    base.close,
+    base.volume,
+    base.close_raw,
+    base.is_halted,
+    base.is_member_asof
 from base
-order by universe, symbol, date
+join universe_hist uh
+    on  base.universe = uh.universe
+    and base.symbol   = uh.symbol
+    and base.date     >= uh.valid_from
+    and (uh.valid_to is null or base.date < uh.valid_to)
+order by base.universe, base.symbol, base.date

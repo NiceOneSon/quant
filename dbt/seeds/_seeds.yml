@@ -27,6 +27,7 @@ seeds:
           - index: 주가지수 (KOSPI, KOSPI200, KOSDAQ)
           - credit: 크레딧 스프레드 (HY OAS, IG OAS)
           - volatility: 변동성 지수 (VIX)
+          - trade: 수출입 지표 (한국 수출입 증감률 등)
       - name: source
         description: >
           수집 소스. ingest.py 배치 모드에서 이 값을 읽어 FDR/FRED 중 선택.
@@ -65,6 +66,10 @@ seeds:
         PCOPPUSDM:  "FRED — 구리 현물가(LME), 월별"
         Gold:       "FDR / Yahoo Finance (GC=F) — LBMA 금 오후가 close, 일별"
         SLV:        "FDR / Yahoo Finance — iShares Silver Trust ETF close (은 가격 proxy), 일별"
+        HG=F:       "FDR / Yahoo Finance — COMEX 구리 선물 1개월물 close (USD/lb), 일별. PCOPPUSDM(LME 월별)보다 고빈도"
+        # ── 한국 무역 ────────────────────────────────────────────────────────
+        XTEXVA01KRM659S: "FRED — 한국 수출 금액 YoY 증감률(%), 월별. 관세청 집계 기반"
+        XTIMVA01KRM659S: "FRED — 한국 수입 금액 YoY 증감률(%), 월별. 관세청 집계 기반"
         # ── 국내 지수 ─────────────────────────────────────────────────────────
         KS11:       "FDR / Yahoo Finance (^KS11) — KOSPI 지수, 일별"
         KS200:      "FDR / Yahoo Finance (^KS200) — KOSPI200 지수, 일별"
