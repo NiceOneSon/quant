@@ -1,11 +1,7 @@
--- 금리 시리즈 + seed(rate_series) 조인 → country·라벨·만기 보강.
--- ELT: country 는 Python 이 아닌 rate_series seed 에서 파생.
+-- 정규화 후: label/tenor/country 는 dim_rate_series(seed) 가 보유.
+-- fct_rates 는 순수 측정값(date, series, rate) + sk_dim_rate_series 만 갖는다.
 select
-    r.date,
-    r.series,
-    coalesce(m.country, 'NA') as country,
-    m.label,
-    m.tenor,
-    r.rate
-from {{ ref('stg_rates') }} as r
-left join {{ ref('rate_series') }} as m on r.series = m.series
+    date,
+    series,
+    rate
+from {{ ref('stg_rates') }}

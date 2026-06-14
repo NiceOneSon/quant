@@ -33,3 +33,10 @@ seeds:
         country: varchar
         label: varchar
         tenor: varchar
+    macro_series:
+      +column_types:
+        series: varchar
+        label: varchar
+        unit: varchar
+        country: varchar
+        category: varchar

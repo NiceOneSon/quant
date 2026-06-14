@@ -10,3 +10,5 @@ schemas:
     dim_security: marts/dim_security.parquet
     fct_rates: marts/fct_rates.parquet
     fct_macro: marts/fct_macro.parquet
+    dim_rate_series: marts/dim_rate_series.parquet
+    dim_macro_series: marts/dim_macro_series.parquet
