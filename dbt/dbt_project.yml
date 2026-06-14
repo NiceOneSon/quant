@@ -1,0 +1,31 @@
+name: "quant_dbt"
+version: "1.0.0"
+config-version: 2
+
+# 이식성: 데이터 입출력 경로는 env_var 로 주입(아래 profiles.yml / 모델 config 참고).
+profile: "quant"
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages", "logs"]
+
+models:
+  quant_dbt:
+    staging:
+      +materialized: view
+    marts:
+      # 마트는 external parquet 로 출력 → 백테스트(polars)·Evidence 가 파일로 소비.
+      # 출력 위치는 각 모델 config(location) 에서 QUANT_MARTS_DIR 로 지정.
+      +materialized: external
+
+seeds:
+  quant_dbt:
+    rate_series:
+      +column_types:
+        series: varchar
+        country: varchar
+        label: varchar
+        tenor: varchar

@@ -19,7 +19,11 @@
       "Bash(/usr/bin/curl -sS -o /dev/null -w \"/universe -> HTTP %{http_code}\\\\n\" http://localhost:3000/universe)",
       "Bash(/usr/bin/curl -sS -o /dev/null -w \"/rates    -> HTTP %{http_code}\\\\n\" http://localhost:3000/rates)",
       "Bash(/usr/bin/curl -sSL -o /dev/null -w \"/prices \\(follow\\) -> HTTP %{http_code}, %{size_download} bytes\\\\n\" http://localhost:3000/prices)",
-      "Bash(echo \"sources exit: $?\")"
+      "Bash(echo \"sources exit: $?\")",
+      "Bash(.venv/bin/dbt deps *)",
+      "Bash(.venv/bin/dbt build *)",
+      "Bash(../.venv/bin/python -c \"import polars as pl; print\\(pl.read_parquet\\('../data/marts/fct_rates.parquet'\\).filter\\(pl.col\\('series'\\)=='DGS10'\\).head\\(2\\).select\\(['date','series','country','label','tenor','rate']\\)\\)\")",
+      "Bash(.venv/bin/python -c \"import duckdb; print\\(duckdb.sql\\(\\\\\"select series,country,label,tenor,rate from '../data/marts/fct_rates.parquet' where series='DGS10' limit 2\\\\\"\\).fetchall\\(\\)\\)\")"
     ]
   }
 }

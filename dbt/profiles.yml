@@ -1,0 +1,10 @@
+# 프로젝트에 동봉(이식성). dbt 실행 시 --profiles-dir . 또는 DBT_PROFILES_DIR=. 로 사용.
+# 모든 경로는 env_var 기본값을 가지므로 이 레포에서 그대로 동작하고, Airflow 는 env 만 주입하면 됨.
+quant:
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"
+  outputs:
+    dev:
+      type: duckdb
+      # 개발용 DuckDB 파일(리니지·ad-hoc). 마트는 별도 external parquet 로도 출력됨.
+      path: "{{ env_var('DBT_DUCKDB_PATH', 'target/quant.duckdb') }}"
+      threads: 4

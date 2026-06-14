@@ -1,0 +1,70 @@
+version: 2
+
+models:
+  - name: fct_prices
+    description: "일별 수정주가 OHLCV(유니버스별). 백테스트·대시보드의 단일 소스."
+    columns:
+      - name: universe
+        description: "유니버스 식별자(예: kospi40). 어느 종목 집합의 가격인지."
+        data_tests: [not_null]
+      - name: symbol
+        description: >
+          KRX 6자리 상장코드(0패딩 문자열, 예 '005930').
+          dim_universe.symbol 및 소스 ticker 와 동일한 조인 키.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_universe')
+                field: symbol
+      - name: date
+        description: "거래일."
+        data_tests: [not_null]
+      - name: close
+        description: "수정주가 종가(KRW). 분할·배당 반영."
+      - name: close_raw
+        description: "원본(미수정) 종가. 벤더 미제공 시 null(수정계수 복원 불가)."
+      - name: volume
+        description: "거래량."
+      - name: is_halted
+        description: "거래정지/무거래(거래량 0). 백테스트는 이 날 체결 불가로 본다."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [date, universe, symbol]
+
+  - name: dim_universe
+    description: "Point-in-time 유니버스 멤버십 구간. [added, removed) 반개구간(생존편향 방지)."
+    columns:
+      - name: universe
+        description: "유니버스 식별자."
+        data_tests: [not_null]
+      - name: symbol
+        description: "KRX 6자리 상장코드. fct_prices.symbol 와 동일 키."
+        data_tests: [not_null]
+      - name: added
+        description: "편입일(관측 시작)."
+        data_tests: [not_null]
+      - name: removed
+        description: "편출일. null 이면 편입 유지. 상장폐지·편출 이력을 보존."
+
+  - name: fct_rates
+    description: "금리 시리즈(무위험·국채). country 로 KR/US 구분, series 로 시리즈 식별."
+    columns:
+      - name: series
+        description: "FRED 시리즈 코드(예: DGS10). 식별 키."
+        data_tests: [not_null]
+      - name: country
+        description: "국가 구분(KR/US). 한국채 vs 미국채 구별 키."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["KR", "US", "NA"]
+      - name: rate
+        description: "연율 퍼센트(예: 3.65 = 3.65%)."
+        data_tests: [not_null]
+      - name: label
+        description: "사람용 라벨(seed rate_series 조인)."
+      - name: tenor
+        description: "만기(3M/2Y/10Y/O·N 등, seed 조인)."
