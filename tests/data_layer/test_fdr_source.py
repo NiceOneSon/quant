@@ -5,7 +5,7 @@ import pytest
 
 from data_layer.fdr_source import FdrPriceSource, FdrUniverseSource
 from data_layer.ingest import normalize_prices
-from data_layer.loader import PRICE_SCHEMA
+from data_layer.loader import RAW_PRICE_SCHEMA
 from data_layer.universe import members_asof
 
 

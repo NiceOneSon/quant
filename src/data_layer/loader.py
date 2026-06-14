@@ -19,19 +19,24 @@ import polars as pl
 
 from data_layer.universe import DEFAULT_DATA_DIR, default_marts_dir
 
-# 저장 스키마. 컬럼 순서·타입의 단일 출처.
-# universe = 어느 유니버스의 가격인지 구분 키(filename 대신 명시적 컬럼).
-PRICE_SCHEMA: dict[str, pl.DataType] = {
+# Python 이 raw parquet 으로 저장하는 스키마(is_halted 없음).
+# is_halted 는 dbt stg_prices 에서 (volume = 0) 으로 파생 → ELT 패턴.
+RAW_PRICE_SCHEMA: dict[str, pl.DataType] = {
     "date": pl.Date(),
     "universe": pl.String(),
     "symbol": pl.String(),
     "open": pl.Float64(),
     "high": pl.Float64(),
     "low": pl.Float64(),
-    "close": pl.Float64(),  # 수정주가 종가
+    "close": pl.Float64(),
     "volume": pl.Int64(),
-    "close_raw": pl.Float64(),  # 원본(미수정) 종가 — 수정계수 복원용
-    "is_halted": pl.Boolean(),  # 거래정지/무거래
+    "close_raw": pl.Float64(),
+}
+
+# 소비 레이어(dbt mart)의 스키마 — is_halted 는 dbt 에서 추가됨.
+PRICE_SCHEMA: dict[str, pl.DataType] = {
+    **RAW_PRICE_SCHEMA,
+    "is_halted": pl.Boolean(),
 }
 
 

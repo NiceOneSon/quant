@@ -5,7 +5,7 @@ import polars as pl
 import pytest
 
 from data_layer.ingest import ingest_prices, normalize_prices
-from data_layer.loader import PRICE_SCHEMA, load_prices, prices_path
+from data_layer.loader import RAW_PRICE_SCHEMA, load_prices, prices_path
 
 
 class _FakePriceSource:
@@ -18,24 +18,26 @@ class _FakePriceSource:
                 "open": [100.0, 101.0],
                 "high": [105.0, 101.0],
                 "low": [99.0, 101.0],
-                "close": [102.0, 101.0],  # 수정주가
-                "volume": [1000, 0],  # 둘째 날 무거래 → halted
-                "close_raw": [120.0, 119.0],  # 원본 종가(수정계수 복원용)
+                "close": [102.0, 101.0],
+                "volume": [1000, 0],  # 둘째 날 무거래 → stg_prices 에서 is_halted=True 파생
+                "close_raw": [120.0, 119.0],
             }
         )
 
 
-def test_normalize_prices_flags_halt_and_matches_schema() -> None:
+def test_normalize_prices_matches_raw_schema() -> None:
+    # ELT 패턴: normalize_prices 는 raw 스키마(is_halted 없음)로 정규화한다.
+    # is_halted 는 dbt stg_prices 에서 (volume = 0) 으로 파생.
     raw = _FakePriceSource().fetch("AAA", date(2020, 1, 1), date(2020, 1, 31))
     stamped = raw.with_columns(pl.lit("AAA").alias("symbol"), pl.lit("u").alias("universe"))
     out = normalize_prices(stamped)
-    assert out.columns == list(PRICE_SCHEMA)
-    assert out.schema == pl.Schema(PRICE_SCHEMA)
-    assert out["is_halted"].to_list() == [False, True]
+    assert out.columns == list(RAW_PRICE_SCHEMA)
+    assert out.schema == pl.Schema(RAW_PRICE_SCHEMA)
+    assert "is_halted" not in out.columns
 
 
 def test_ingest_writes_raw_prices(tmp_path: Path) -> None:
-    # ingest 는 raw parquet 을 적재한다(dbt 이전). raw 를 직접 검증.
+    # ELT: ingest 는 raw parquet 을 적재한다(is_halted 없음 — dbt 에서 파생).
     ingest_prices(
         _FakePriceSource(),
         "kospi200",
@@ -48,7 +50,7 @@ def test_ingest_writes_raw_prices(tmp_path: Path) -> None:
     assert set(df["universe"].to_list()) == {"kospi200"}
     assert set(df["symbol"].unique().to_list()) == {"AAA", "BBB"}
     assert "close_raw" in df.columns
-    assert df.filter(pl.col("is_halted"))["volume"].to_list() == [0, 0]
+    assert "is_halted" not in df.columns  # raw 에는 없음 → dbt 에서 파생
 
 
 def _write_prices_mart(marts: Path) -> None:
@@ -69,7 +71,7 @@ def test_load_prices_filters_universe_and_dates(tmp_path: Path) -> None:
     _write_prices_mart(marts)
 
     df = load_prices("kospi200", marts_dir=marts)
-    assert set(df["universe"].to_list()) == {"kospi200"}  # other 유니버스 제외
+    assert set(df["universe"].to_list()) == {"kospi200"}
     assert df.height == 2
 
     df2 = load_prices("kospi200", start="2020-01-03", marts_dir=marts)

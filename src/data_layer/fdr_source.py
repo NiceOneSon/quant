@@ -73,6 +73,90 @@ def _fdr_listing(market: str) -> list[str]:
     return [str(code) for code in df["Code"].tolist()]
 
 
+# market -> 종목 마스터 프레임(symbol, name, market). 테스트에서 주입해 모킹.
+SecurityListingFn = Callable[[str], pl.DataFrame]
+
+
+def _fdr_securities(market: str) -> pl.DataFrame:
+    """FDR StockListing 으로 `market` 의 종목 마스터(symbol, name, market)를 반환한다.
+
+    문자열 컬럼이라 pl.from_pandas(pyarrow 필요) 대신 리스트로 직접 구성한다.
+    """
+    import FinanceDataReader as fdr  # 지연 import: 선택 의존성('data' extra)
+
+    pdf = fdr.StockListing(market)
+    return pl.DataFrame(
+        {
+            "symbol": [str(c) for c in pdf["Code"].tolist()],
+            "name": [str(n) for n in pdf["Name"].tolist()],
+            "market": [str(m) for m in pdf["Market"].tolist()],
+        }
+    )
+
+
+@dataclass
+class FdrSecuritySource:
+    """FDR StockListing 기반 종목 마스터 소스 (symbol → name, market).
+
+    Attributes:
+        listing_fn: 조회 함수. None 이면 FDR 실호출. 테스트에서 주입해 모킹.
+        markets: 이름 -> FDR 시장 매핑.
+    """
+
+    listing_fn: SecurityListingFn | None = None
+    markets: dict[str, str] = field(default_factory=lambda: dict(_DEFAULT_MARKETS))
+
+    def fetch(self, name: str) -> pl.DataFrame:
+        market = self.markets.get(name)
+        if market is None:
+            raise ValueError(f"FDR 종목 마스터 미지원: {name!r}. 지원: {sorted(self.markets)}")
+        fn = self.listing_fn or _fdr_securities
+        return fn(market)
+
+
+SeriesReadFn = Callable[[str, date, date], pl.DataFrame]
+
+
+def _fdr_series(series: str, start: date, end: date) -> pl.DataFrame:
+    """FDR 로 FX·지수 시계열을 조회해 date/value 프레임으로 반환한다 (네트워크 격리).
+
+    예) 'USD/KRW', 'KS11', 'KS200', 'KQ11'
+    """
+    import FinanceDataReader as fdr  # 지연 import: 선택 의존성('data' extra)
+
+    pdf = fdr.DataReader(series, start.isoformat(), end.isoformat())
+    if pdf.empty:
+        return pl.DataFrame(schema={"date": pl.Date(), "value": pl.Float64()})
+    frame = pl.from_pandas(pdf.reset_index())
+    date_col = frame.columns[0]
+    # FDR 지수/FX 는 'Close' 또는 시리즈명으로 값 컬럼이 온다 → 날짜 외 첫 번째 컬럼 사용.
+    value_col = next(c for c in frame.columns if c != date_col)
+    return (
+        frame.rename({date_col: "date", value_col: "value"})
+        .with_columns(pl.col("date").cast(pl.Date), pl.col("value").cast(pl.Float64))
+        .select(["date", "value"])
+    )
+
+
+@dataclass
+class FdrSeriesSource:
+    """FDR 기반 FX·지수 시계열 소스 (date, value).
+
+    series 예: 'USD/KRW', 'USD/JPY', 'KS11'(KOSPI), 'KS200'(KOSPI200), 'KQ11'(KOSDAQ).
+
+    Attributes:
+        series: FDR 에 전달할 시리즈 코드.
+        read_fn: 조회 함수. None 이면 FDR 실호출. 테스트에서 주입해 모킹.
+    """
+
+    series: str
+    read_fn: SeriesReadFn | None = None
+
+    def fetch(self, start: date, end: date) -> pl.DataFrame:
+        fn = self.read_fn or _fdr_series
+        return fn(self.series, start, end)
+
+
 @dataclass
 class FdrUniverseSource:
     """FDR StockListing 기반 유니버스 소스 — 깨진 PykrxUniverseSource 대체.

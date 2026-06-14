@@ -1,21 +1,23 @@
-"""데이터 수집 진입점. 유니버스 멤버십과 가격(OHLCV)을 point-in-time 로 적재한다.
+"""데이터 수집 진입점. 유니버스 멤버십, 가격(OHLCV), 금리, 매크로 시계열을 적재한다.
 
 사용법:
   # 1) 유니버스 멤버십
-  #  - fdr : 현재 상장목록 스냅샷을 누적(앞으로 쌓임). 시장 단위만(kospi/kosdaq/krx).
-  #  - csv : 과거 멤버십 이력을 직접 주입(과거 백테스트 즉시 가능). 상폐 종목 포함.
-  #          data/raw/universe/<universe>.csv, 헤더 symbol,added,removed (재편입은 여러 행).
   uv run python scripts/ingest.py --config configs/backtest.yaml --dataset universe --source fdr
   uv run python scripts/ingest.py --config configs/backtest.yaml --dataset universe --source csv
-  # 2) 가격 — 유니버스에 한 번이라도 편입된 모든 종목의 OHLCV (상장폐지 포함)
-  uv run python scripts/ingest.py --config configs/backtest.yaml --dataset prices --source pykrx
-  # 3) 무위험금리 (FRED, API 키 불필요)
-  uv run python scripts/ingest.py --config configs/backtest.yaml --dataset rates --source fred
+  # 2) 가격 — 유니버스 편입 이력 전체(상장폐지 포함)
+  uv run python scripts/ingest.py --config configs/backtest.yaml --dataset prices --source fdr
+  # 3) 무위험금리 (FRED)
+  uv run python scripts/ingest.py --config configs/backtest.yaml --dataset rates --source fred --series DGS10
+  # 4) 매크로/FX/원자재/지수 (ELT: raw date/value 적재 → dbt 가 메타데이터 조인)
+  #   FDR: FX('USD/KRW'), 지수('KS11', 'KS200', 'KQ11')
+  uv run python scripts/ingest.py --config configs/backtest.yaml --dataset macro --source fdr --series USD/KRW
+  #   FRED: DXY('DTWEXBGS'), WTI('DCOILWTICO'), 구리('PCOPPUSDM')
+  uv run python scripts/ingest.py --config configs/backtest.yaml --dataset macro --source fred --series DCOILWTICO
 
-config.data.universe 이름과 config.data 의 기간을 사용한다.
-저장: 유니버스 → data/reference/universe/<universe>.parquet,
-      가격     → data/processed/prices/<universe>.parquet,
-      금리     → data/reference/rates/<series>.parquet.
+저장: 유니버스 → data/reference/universe/<universe>.parquet
+      가격     → data/processed/prices/<universe>.parquet
+      금리     → data/reference/rates/<series>.parquet
+      매크로   → data/reference/macro/<series>.parquet  (슬래시 → 언더스코어)
 pykrx/fdr 소스는 `uv sync --extra data` 필요.
 """
 
@@ -28,8 +30,10 @@ from common.config import AppConfig, load_config
 from common.logging import get_logger
 from data_layer.fred_source import DEFAULT_RISK_FREE_SERIES
 from data_layer.ingest import (
+    ingest_macro,
     ingest_prices,
     ingest_rates,
+    ingest_securities,
     ingest_universe,
     ingest_universe_snapshot,
 )
@@ -107,12 +111,44 @@ def _ingest_rates(config: AppConfig, source_kind: str, series: str) -> None:
     log.info("done | dataset=rates source=%s series=%s path=%s", source_kind, series, path)
 
 
+def _ingest_securities(source_kind: str, market: str) -> None:
+    if source_kind != "fdr":
+        raise ValueError("종목 마스터는 현재 fdr 소스만 지원합니다.")
+    from data_layer.fdr_source import FdrSecuritySource
+
+    path = ingest_securities(FdrSecuritySource(), market)
+    log.info("done | dataset=securities source=fdr market=%s path=%s", market, path)
+
+
+def _ingest_macro(config: AppConfig, source_kind: str, series: str) -> None:
+    if not series:
+        raise ValueError("매크로 수집에는 --series 가 필요합니다.")
+    if source_kind == "fdr":
+        from data_layer.fdr_source import FdrSeriesSource
+
+        source = FdrSeriesSource(series=series)
+    elif source_kind == "fred":
+        from data_layer.fred_source import FredSeriesSource
+
+        source = FredSeriesSource(series=series)
+    else:
+        raise ValueError("매크로는 fdr 또는 fred 소스만 지원합니다.")
+
+    path = ingest_macro(
+        source,
+        series,
+        start=date.fromisoformat(config.data.start_date),
+        end=date.fromisoformat(config.data.end_date),
+    )
+    log.info("done | dataset=macro source=%s series=%s path=%s", source_kind, series, path)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True, help="설정 이름 또는 경로 (예: dev)")
     parser.add_argument(
         "--dataset",
-        choices=["universe", "prices", "rates"],
+        choices=["universe", "prices", "rates", "securities", "macro"],
         default="universe",
         help="수집 대상",
     )
@@ -122,6 +158,7 @@ def main() -> None:
     parser.add_argument(
         "--series", default=DEFAULT_RISK_FREE_SERIES, help="FRED 금리 시리즈 (rates 용)"
     )
+    parser.add_argument("--market", default="kospi", help="종목 마스터 시장 (securities 용)")
     args = parser.parse_args()
 
     name = args.config.split("/")[-1].replace(".yaml", "")
@@ -131,8 +168,12 @@ def main() -> None:
         _ingest_universe(config, args.source)
     elif args.dataset == "prices":
         _ingest_prices(config, args.source)
-    else:
+    elif args.dataset == "rates":
         _ingest_rates(config, args.source, args.series)
+    elif args.dataset == "macro":
+        _ingest_macro(config, args.source, args.series)
+    else:
+        _ingest_securities(args.source, args.market)
 
 
 if __name__ == "__main__":

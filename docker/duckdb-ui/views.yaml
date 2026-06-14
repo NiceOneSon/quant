@@ -7,4 +7,6 @@ schemas:
   main:
     fct_prices: marts/fct_prices.parquet
     dim_universe: marts/dim_universe.parquet
+    dim_security: marts/dim_security.parquet
     fct_rates: marts/fct_rates.parquet
+    fct_macro: marts/fct_macro.parquet

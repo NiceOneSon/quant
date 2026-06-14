@@ -30,7 +30,13 @@
       "Bash(/usr/bin/curl -sSL -o /dev/null -w \"/prices -> %{http_code}\\\\n\" http://localhost:3000/prices)",
       "Bash(/usr/bin/curl -sS -o /dev/null -w \"duckdb-ui :4213 -> %{http_code}\\\\n\" http://localhost:4213/)",
       "Bash(docker volume *)",
-      "Bash(.venv/bin/dbt parse *)"
+      "Bash(.venv/bin/dbt parse *)",
+      "Bash(docker exec *)",
+      "Bash(docker exec quant-duckdb-ui python -c ' *)",
+      "Bash(rm -rf /tmp/duckdb_ui_backup)",
+      "Bash(mkdir -p /tmp/duckdb_ui_backup)",
+      "Bash(docker cp *)",
+      "Bash(/usr/bin/curl -sS -o /dev/null -w \"evidence :3000 -> %{http_code} | \" http://localhost:3000/)"
     ]
   }
 }

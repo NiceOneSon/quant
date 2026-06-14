@@ -29,9 +29,6 @@ sources:
             description: "거래량(주)."
           - name: close_raw
             description: "원본(미수정) 종가. 무료 벤더 미제공 시 null(수정계수 복원 불가)."
-          - name: is_halted
-            description: "거래정지/무거래(거래량 0). 백테스트는 이 날 체결 불가로 본다."
-
       - name: universe
         description: >
           Point-in-time 유니버스 멤버십 구간. 한 행 = "symbol 이 universe 에 [added, removed) 동안 편입".
@@ -57,7 +54,29 @@ sources:
             description: "관측일."
           - name: series
             description: "FRED 시리즈 코드(예: DGS10, IR3TIB01KRM156N). 시리즈 식별 키."
-          - name: country
-            description: "국가 구분(KR/US/NA). 한국채 vs 미국채 구별."
           - name: rate
-            description: "연율 퍼센트(예: 3.65 = 3.65%)."
+            description: "연율 퍼센트(예: 3.65 = 3.65%). country 는 dbt rate_series seed 에서 파생."
+
+      - name: macro
+        description: "매크로/FX/원자재/지수 시계열. 한 행 = (series, date) 의 값."
+        meta:
+          external_location: "{{ env_var('QUANT_DATA_DIR', '../data') }}/reference/macro/*.parquet"
+        columns:
+          - name: date
+            description: "관측일."
+          - name: series
+            description: "시리즈 코드(예: USD/KRW, KS11, DCOILWTICO). 식별 키."
+          - name: value
+            description: "시리즈 값(단위는 macro_series seed 참조). label·country 는 dbt seed 에서 파생."
+
+      - name: securities
+        description: "종목 마스터(symbol → name, market). symbol 이 실제 어느 종목인지 해석하는 참조."
+        meta:
+          external_location: "{{ env_var('QUANT_DATA_DIR', '../data') }}/reference/securities/*.parquet"
+        columns:
+          - name: symbol
+            description: "KRX 6자리 상장코드(0패딩 문자열). prices.symbol·universe.symbol 과 동일 키."
+          - name: name
+            description: "종목명(예: 005930 → 삼성전자)."
+          - name: market
+            description: "상장 시장(KOSPI/KOSDAQ 등)."

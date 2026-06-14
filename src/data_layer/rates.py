@@ -15,9 +15,15 @@ import polars as pl
 
 from data_layer.universe import DEFAULT_DATA_DIR, default_marts_dir
 
-# 저장 스키마. rate 는 연율 퍼센트(예: 3.65 = 3.65%).
-# series = 시리즈 식별 키(FRED 코드), country = 국가 구분(KR/US/...). 여러 시리즈를
-# 한 테이블로 합쳐도 self-describing 하게 구분된다.
+# Python 이 raw parquet 으로 저장하는 스키마(country 없음).
+# country 는 dbt int_rates_enriched 에서 rate_series seed 조인으로 파생 → ELT 패턴.
+RAW_RATE_SCHEMA: dict[str, pl.DataType] = {
+    "date": pl.Date(),
+    "series": pl.String(),
+    "rate": pl.Float64(),
+}
+
+# 소비 레이어(dbt mart)의 스키마 — label·tenor 는 dbt 에서 추가됨.
 RATE_SCHEMA: dict[str, pl.DataType] = {
     "date": pl.Date(),
     "series": pl.String(),

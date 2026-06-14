@@ -1,0 +1,9 @@
+series,label,unit,country,category
+USD/KRW,달러-원 환율,KRW,KR,fx
+USD/JPY,달러-엔 환율,JPY,JP,fx
+DTWEXBGS,달러인덱스 DXY,index,US,macro
+DCOILWTICO,WTI 원유가,USD/bbl,NA,commodity
+PCOPPUSDM,구리 현물가,USD/MT,NA,commodity
+KS11,KOSPI 지수,point,KR,index
+KS200,KOSPI200 지수,point,KR,index
+KQ11,KOSDAQ 지수,point,KR,index

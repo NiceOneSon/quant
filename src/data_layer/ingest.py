@@ -12,10 +12,12 @@ from pathlib import Path
 import polars as pl
 
 from common.logging import get_logger
-from data_layer.loader import PRICE_SCHEMA, prices_path
-from data_layer.rates import RATE_SCHEMA, RATE_SERIES, rates_path, series_country
-from data_layer.sources import PriceSource, RateSource, UniverseSource
+from data_layer.loader import RAW_PRICE_SCHEMA, prices_path
+from data_layer.rates import RAW_RATE_SCHEMA, rates_path
+from data_layer.securities import SECURITY_SCHEMA, securities_path
+from data_layer.sources import MacroSource, PriceSource, RateSource, SecuritySource, UniverseSource
 from data_layer.universe import (
+    DEFAULT_DATA_DIR,
     Membership,
     memberships_to_frame,
     universe_path,
@@ -23,6 +25,14 @@ from data_layer.universe import (
 from data_layer.universe_snapshots import rebuild_universe, record_snapshot
 
 log = get_logger(__name__)
+
+# 매크로/FX/원자재/지수 시계열 raw 스키마.
+# country·label·category 는 dbt macro_series seed 조인으로 파생 → ELT 패턴.
+RAW_MACRO_SCHEMA: dict[str, pl.DataType] = {
+    "date": pl.Date(),
+    "series": pl.String(),
+    "value": pl.Float64(),
+}
 
 
 def normalize_memberships(memberships: list[Membership]) -> list[Membership]:
@@ -104,15 +114,14 @@ def ingest_universe_snapshot(
 
 
 def normalize_prices(frame: pl.DataFrame) -> pl.DataFrame:
-    """가격 프레임을 저장 스키마로 정규화한다 (순수).
+    """가격 프레임을 raw 저장 스키마로 정규화한다 (순수).
 
-    - is_halted = 거래량 0 (거래정지/무거래). 백테스트가 체결 가능으로 오인하지 않도록 표시.
-    - PRICE_SCHEMA 컬럼 순서·타입으로 맞추고 (symbol, date) 정렬(재현성).
+    ELT 패턴: is_halted 는 dbt stg_prices 에서 (volume = 0) 으로 파생한다.
+    여기서는 컬럼 순서·타입 정규화와 (symbol, date) 정렬만 수행한다.
     """
     return (
-        frame.with_columns((pl.col("volume") == 0).alias("is_halted"))
-        .select(list(PRICE_SCHEMA))
-        .cast(PRICE_SCHEMA)  # type: ignore[arg-type]
+        frame.select(list(RAW_PRICE_SCHEMA))
+        .cast(RAW_PRICE_SCHEMA)  # type: ignore[arg-type]
         .sort(["symbol", "date"])
     )
 
@@ -143,7 +152,7 @@ def ingest_prices(
         combined = pl.concat(frames).with_columns(pl.lit(universe).alias("universe"))
         out = normalize_prices(combined)
     else:
-        out = pl.DataFrame(schema=PRICE_SCHEMA)
+        out = pl.DataFrame(schema=RAW_PRICE_SCHEMA)
 
     path = prices_path(universe, data_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -166,21 +175,72 @@ def ingest_rates(
     *,
     data_dir: Path | None = None,
 ) -> Path:
-    """금리 시리즈를 수집해 reference parquet 으로 저장한다 (date, series, country, rate)."""
-    if series not in RATE_SERIES:
-        log.warning("미등록 금리 시리즈 series=%s → country=NA", series)
+    """금리 시리즈를 수집해 reference parquet 으로 저장한다 (date, series, rate).
+
+    ELT 패턴: country·label·tenor 는 dbt int_rates_enriched 에서 rate_series seed 조인으로 파생.
+    """
     frame = source.fetch(start, end)  # date, rate
     out = (
-        frame.with_columns(
-            pl.lit(series).alias("series"),
-            pl.lit(series_country(series)).alias("country"),
-        )
-        .select(list(RATE_SCHEMA))
-        .cast(RATE_SCHEMA)  # type: ignore[arg-type]
+        frame.with_columns(pl.lit(series).alias("series"))
+        .select(list(RAW_RATE_SCHEMA))
+        .cast(RAW_RATE_SCHEMA)  # type: ignore[arg-type]
         .sort("date")
     )
     path = rates_path(series, data_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
     out.write_parquet(path)
     log.info("rates ingested | series=%s rows=%d -> %s", series, out.height, path)
+    return path
+
+
+def macro_path(series: str, data_dir: Path | None = None) -> Path:
+    """`series` 매크로 데이터의 parquet 경로 (슬래시 → 언더스코어)."""
+    safe = series.replace("/", "_")
+    return (data_dir or DEFAULT_DATA_DIR) / "reference" / "macro" / f"{safe}.parquet"
+
+
+def ingest_macro(
+    source: MacroSource,
+    series: str,
+    start: date,
+    end: date,
+    *,
+    data_dir: Path | None = None,
+) -> Path:
+    """매크로/FX/원자재/지수 시계열을 수집해 reference parquet 으로 저장한다 (date, series, value).
+
+    ELT 패턴: country·label·category 는 dbt fct_macro 에서 macro_series seed 조인으로 파생.
+    """
+    frame = source.fetch(start, end)  # date, value
+    out = (
+        frame.with_columns(pl.lit(series).alias("series"))
+        .select(list(RAW_MACRO_SCHEMA))
+        .cast(RAW_MACRO_SCHEMA)  # type: ignore[arg-type]
+        .sort("date")
+    )
+    path = macro_path(series, data_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    out.write_parquet(path)
+    log.info("macro ingested | series=%s rows=%d -> %s", series, out.height, path)
+    return path
+
+
+def ingest_securities(
+    source: SecuritySource,
+    name: str,
+    *,
+    data_dir: Path | None = None,
+) -> Path:
+    """종목 마스터(symbol→name, market)를 수집해 reference parquet 으로 저장한다."""
+    df = source.fetch(name)
+    out = (
+        df.select(list(SECURITY_SCHEMA))
+        .unique(subset=["symbol"])
+        .cast(SECURITY_SCHEMA)  # type: ignore[arg-type]
+        .sort("symbol")
+    )
+    path = securities_path(name, data_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    out.write_parquet(path)
+    log.info("securities ingested | name=%s rows=%d -> %s", name, out.height, path)
     return path

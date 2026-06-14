@@ -38,6 +38,27 @@ def _fred_rate(series: str, start: date, end: date) -> pl.DataFrame:
 
 
 @dataclass
+class FredSeriesSource:
+    """FRED 시계열 소스 — date/value 반환. 매크로·원자재에 사용.
+
+    FredRateSource 와 동일 API 지만 컬럼명이 rate → value.
+    예) DTWEXBGS(달러인덱스), DCOILWTICO(WTI), PCOPPUSDM(구리).
+
+    Attributes:
+        series: FRED 시리즈 코드.
+        read_fn: 조회 함수. None 이면 FDR 실호출. 테스트에서 주입해 모킹.
+    """
+
+    series: str
+    read_fn: RateReadFn | None = None
+
+    def fetch(self, start: date, end: date) -> pl.DataFrame:
+        fn = self.read_fn or _fred_rate
+        df = fn(self.series, start, end)
+        return df.rename({"rate": "value"})
+
+
+@dataclass
 class FredRateSource:
     """FRED 금리 소스. 기본은 한국 3개월 은행간 금리(무위험 proxy).
 

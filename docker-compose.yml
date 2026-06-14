@@ -11,6 +11,9 @@ services:
     volumes:
       - ./data:/data:ro
       - duckdb-ui-state:/work
+      # UI 노트북은 여기에 저장됨(/root/.duckdb/extension_data/ui/ui.db).
+      # 컨테이너 재생성(rebuild)마다 날아가지 않도록 볼륨으로 영속화.
+      - duckdb-ui-notebooks:/root/.duckdb/extension_data/ui
     environment:
       - DATA_DIR=/data
       - UI_PORT=4213
@@ -31,3 +34,4 @@ services:
 
 volumes:
   duckdb-ui-state:
+  duckdb-ui-notebooks: # UI 노트북 영속(rebuild 에도 보존)

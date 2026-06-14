@@ -52,6 +52,24 @@ class RateSource(Protocol):
         ...
 
 
+@runtime_checkable
+class MacroSource(Protocol):
+    """기간으로 단일 시계열(FX/지수/원자재)을 가져오는 수집 소스."""
+
+    def fetch(self, start: date, end: date) -> pl.DataFrame:
+        """[start, end] 시계열을 반환한다. 컬럼: date, value."""
+        ...
+
+
+@runtime_checkable
+class SecuritySource(Protocol):
+    """시장(market)으로 종목 마스터를 가져오는 수집 소스."""
+
+    def fetch(self, name: str) -> pl.DataFrame:
+        """`name`(시장) 의 종목 마스터를 반환한다. 컬럼: symbol, name, market."""
+        ...
+
+
 @dataclass
 class CsvUniverseSource:
     """raw CSV 에서 과거 멤버십 이력을 주입하는 소스 (수동 PIT 유니버스).
