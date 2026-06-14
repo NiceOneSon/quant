@@ -10,3 +10,4 @@ schemas:
     fct_macro: marts/fct_macro.parquet
     fct_prices: marts/fct_prices.parquet
     fct_rates: marts/fct_rates.parquet
+    fct_stock_features: marts/fct_stock_features.parquet

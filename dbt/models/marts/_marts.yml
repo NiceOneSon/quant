@@ -240,3 +240,27 @@ models:
         description: "시리즈 값. 단위는 dim_macro_series.unit 참조."
         data_tests:
           - not_null
+
+  - name: fct_stock_features
+    description: >
+      종목 단면 팩터 mart. grain: (date, symbol, universe).
+      raw 팩터 + CS rank(0~1, 항상 높을수록 좋음) + family/composite score.
+      CS rank: percent_rank() over (partition by date, universe).
+      낮을수록 좋은 팩터(vol, beta)는 1 - percent_rank() 로 반전.
+      팩터 패밀리: Momentum / Low-vol / Liquidity (가격 기반).
+      Value·Quality·Growth 는 재무 데이터 수집 후 추가 예정.
+    columns:
+      - name: sk_id
+        description: "서로게이트 키 = hash(date, symbol, universe)."
+        data_tests: [not_null, unique]
+      - name: date
+        data_tests: [not_null]
+      - name: symbol
+        data_tests: [not_null]
+      - name: name
+        description: "종목명. dim_security 조인."
+        data_tests: [not_null]
+      - name: universe
+        data_tests: [not_null]
+      - name: score_composite
+        description: "family score 단순평균. 높을수록 복합 팩터 우위."

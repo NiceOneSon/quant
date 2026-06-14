@@ -20,6 +20,55 @@ models:
         description: "연율 퍼센트(예: 3.65 = 3.65%)."
         data_tests: [not_null]
 
+  - name: int_daily_returns
+    description: >
+      종목 일간수익률 + KOSPI 수익률. int_stock_features 의 소스.
+      거래정지일(is_halted=true)은 ret_1d=null 로 rolling 계산에서 자동 제외.
+      is_member_asof=true 종목만 포함 (생존편향 없는 PIT 필터).
+    columns:
+      - name: date
+        data_tests: [not_null]
+      - name: symbol
+        data_tests: [not_null]
+      - name: universe
+        data_tests: [not_null]
+      - name: ret_1d
+        description: "일간 단순수익률. 거래정지일 null."
+      - name: turnover
+        description: "거래대금 근사치 = volume × close (KRW)."
+      - name: kospi_ret_1d
+        description: "KOSPI 지수 일간수익률. 베타 계산 기준."
+
+  - name: int_stock_features
+    description: >
+      종목 단면 팩터 raw 값. rolling 윈도우 계산.
+      팩터: Momentum / Low-vol / Liquidity (가격 기반).
+      Value·Quality 는 재무 데이터 수집 후 추가 예정.
+      fct_stock_features 에서 CS rank·composite score 추가.
+    columns:
+      - name: date
+        data_tests: [not_null]
+      - name: symbol
+        data_tests: [not_null]
+      - name: universe
+        data_tests: [not_null]
+      - name: mom_12_1m
+        description: "표준 모멘텀: p_1m / p_12m - 1. 최근 1개월 제외."
+      - name: rev_1w
+        description: "1주 단기반전: close / p_5d - 1. 음수 신호."
+      - name: hi52w_ratio
+        description: "52주 최고가 대비: close / max(close, 252d)."
+      - name: vol_1m
+        description: "실현변동성 21일."
+      - name: beta_1y
+        description: "KOSPI 대비 252일 베타 (OLS slope)."
+      - name: idio_vol_1m
+        description: "특이변동성 21일: sqrt(var(ret) - β²·var(kospi))."
+      - name: adv_20d
+        description: "거래대금 20일 평균 (KRW)."
+      - name: vol_surge
+        description: "거래대금 급등: adv_5d / adv_20d."
+
   - name: int_prices_pit
     description: >
       stg_prices × stg_universe AS-OF 조인.
