@@ -19,6 +19,7 @@ dbt-test:
 
 dbt-build:
 	cd $(DBT_DIR) && $(DBT_BIN) build --profiles-dir .
+	uv run python scripts/gen_duckdb_views.py
 
 dbt-docs:
 	cd $(DBT_DIR) && $(DBT_BIN) docs generate --profiles-dir . && $(DBT_BIN) docs serve --profiles-dir .

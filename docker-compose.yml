@@ -11,6 +11,8 @@ services:
     volumes:
       - ./data:/data:ro
       - duckdb-ui-state:/work
+      # views.yaml 을 마운트해 rebuild 없이 뷰 변경을 반영한다.
+      - ./docker/duckdb-ui/views.yaml:/app/views.yaml:ro
       # UI 노트북은 여기에 저장됨(/root/.duckdb/extension_data/ui/ui.db).
       # 컨테이너 재생성(rebuild)마다 날아가지 않도록 볼륨으로 영속화.
       - duckdb-ui-notebooks:/root/.duckdb/extension_data/ui

@@ -44,7 +44,8 @@
       "Bash(dbt/.venv/bin/dbt run *)",
       "Bash(../.venv/bin/dbt test *)",
       "Bash(dbt/.venv/bin/dbt test *)",
-      "Bash(.venv/bin/dbt test *)"
+      "Bash(.venv/bin/dbt test *)",
+      "Bash(docker restart *)"
     ]
   }
 }
