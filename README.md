@@ -124,9 +124,20 @@ docker compose down
 | **DuckDB UI** | http://localhost:4213 | SQL 노트북 + 즉석 차트 (탐색) |
 | **Evidence** | http://localhost:3000 | 코드형 BI 대시보드 |
 
-Evidence 페이지:
+### DuckDB UI 뷰 갱신
+
+`make dbt-build` 는 `scripts/gen_duckdb_views.py` 를 자동 실행해 `docker/duckdb-ui/views.yaml` 을 마트 목록과 동기화한다.
+단, DuckDB UI 컨테이너는 **기동 시 views.yaml 을 한 번만 읽으므로**, dbt 스키마 변경(테이블 추가·삭제) 후에는 컨테이너를 재시작해야 반영된다.
+
+```bash
+make dbt-build                          # 1) dbt 빌드 + views.yaml 재생성
+docker compose restart duckdb-ui        # 2) 컨테이너 재시작으로 새 뷰 로드
+```
+
+### Evidence 페이지
+
 - **가격** `/prices` — 종목별 OHLCV·거래량·거래정지 (종목명 JOIN 포함)
-- **유니버스** `/universe` — 구성 종목·소스별 규모
+- **유니버스** `/universe` — 편입·갭 구간 이력 (SCD2)
 - **금리** `/rates` — 무위험금리·국채 수익률 곡선·장단기 스프레드
 - **매크로** `/macro` — FX·달러인덱스·VIX·원자재·크레딧·인플레이션·고용·통화량·수출입
 

@@ -6,7 +6,7 @@ schemas:
     dim_macro_series: marts/dim_macro_series.parquet
     dim_rate_series: marts/dim_rate_series.parquet
     dim_security: marts/dim_security.parquet
-    dim_universe: marts/dim_universe.parquet
+    dim_universe_history: marts/dim_universe_history.parquet
     fct_macro: marts/fct_macro.parquet
     fct_prices: marts/fct_prices.parquet
     fct_rates: marts/fct_rates.parquet

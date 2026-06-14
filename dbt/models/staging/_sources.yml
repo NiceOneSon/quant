@@ -3,18 +3,22 @@ version: 2
 sources:
   - name: raw
     description: >
-      Python 추출 파이프라인(pykrx/FDR/FRED)이 적재한 원본 parquet.
+      Python 추출 파이프라인(FDR/FRED)이 적재한 원본 parquet.
       위치는 QUANT_DATA_DIR 환경변수로 주입(기본: 이 레포의 ../data).
     tables:
       - name: prices
         description: "일별 OHLCV(수정주가). 한 행 = (universe, symbol, date)."
+        loaded_at_field: "cast(date as timestamp)"
+        freshness:
+          warn_after: {count: 3, period: day}    # 주말·공휴일 포함 장마감 후 일별 수집
+          error_after: {count: 7, period: day}
         meta:
           external_location: "{{ env_var('QUANT_DATA_DIR', '../data') }}/processed/prices/*.parquet"
         columns:
           - name: universe
-            description: "유니버스 식별자(예: kospi40). 어느 종목 집합으로 수집한 가격인지."
+            description: "유니버스 식별자(예: kospi200). 어느 종목 집합으로 수집한 가격인지."
           - name: symbol
-            description: "KRX 6자리 상장코드(0패딩 문자열, 예 '005930'). 종목 식별·조인 키(universe.symbol 과 동일)."
+            description: "KRX 6자리 상장코드(0패딩 문자열, 예 '005930'). 종목 식별·조인 키."
           - name: date
             description: "거래일."
           - name: open
@@ -28,25 +32,34 @@ sources:
           - name: volume
             description: "거래량(주)."
           - name: close_raw
-            description: "원본(미수정) 종가. 무료 벤더 미제공 시 null(수정계수 복원 불가)."
+            description: "원본(미수정) 종가. 무료 벤더 미제공 시 null."
+
       - name: universe
         description: >
           Point-in-time 유니버스 멤버십 구간. 한 행 = "symbol 이 universe 에 [added, removed) 동안 편입".
           상장폐지·편출 종목도 그 시점 이력을 보존 → 생존편향 방지.
+        loaded_at_field: "cast(added as timestamp)"
+        freshness:
+          warn_after: {count: 45, period: day}   # KOSPI200 리밸런싱 연 2회(6월·12월) + 수시 스냅샷
+          error_after: {count: 180, period: day}
         meta:
           external_location: "{{ env_var('QUANT_DATA_DIR', '../data') }}/reference/universe/*.parquet"
         columns:
           - name: universe
-            description: "유니버스 식별자(예: kospi40, kospi). 이 멤버십이 속한 종목 집합의 이름."
+            description: "유니버스 식별자(예: kospi200). 멤버십이 속한 종목 집합."
           - name: symbol
-            description: "KRX 6자리 상장코드(0패딩 문자열). 어느 종목인지. prices.symbol 과 동일 키."
+            description: "KRX 6자리 상장코드(0패딩 문자열). prices.symbol 과 동일 키."
           - name: added
             description: "편입일(구간 시작, 반개구간 [added, removed) 의 시작)."
           - name: removed
-            description: "편출일. null 이면 현재까지 편입 유지. 상장폐지·편출 시점."
+            description: "편출일. null 이면 현재까지 편입 유지."
 
       - name: rates
         description: "금리 시리즈(무위험·국채). 한 행 = (series, date) 의 연율."
+        loaded_at_field: "cast(date as timestamp)"
+        freshness:
+          warn_after: {count: 10, period: day}   # 일별~주별 혼재(ICSA·WALCL은 주별, 공휴일 버퍼)
+          error_after: {count: 21, period: day}
         meta:
           external_location: "{{ env_var('QUANT_DATA_DIR', '../data') }}/reference/rates/*.parquet"
         columns:
@@ -55,10 +68,14 @@ sources:
           - name: series
             description: "FRED 시리즈 코드(예: DGS10, IR3TIB01KRM156N). 시리즈 식별 키."
           - name: rate
-            description: "연율 퍼센트(예: 3.65 = 3.65%). country 는 dbt rate_series seed 에서 파생."
+            description: "연율 퍼센트(예: 3.65 = 3.65%)."
 
       - name: macro
-        description: "매크로/FX/원자재/지수 시계열. 한 행 = (series, date) 의 값."
+        description: "매크로/FX/원자재/지수/수출입 시계열. 한 행 = (series, date) 의 값."
+        loaded_at_field: "cast(date as timestamp)"
+        freshness:
+          warn_after: {count: 45, period: day}   # 월별 시리즈(CPI·PCE·M2 등) FRED 발표 lag 포함
+          error_after: {count: 90, period: day}
         meta:
           external_location: "{{ env_var('QUANT_DATA_DIR', '../data') }}/reference/macro/*.parquet"
         columns:
@@ -67,10 +84,10 @@ sources:
           - name: series
             description: "시리즈 코드(예: USD/KRW, KS11, DCOILWTICO). 식별 키."
           - name: value
-            description: "시리즈 값(단위는 macro_series seed 참조). label·country 는 dbt seed 에서 파생."
+            description: "시리즈 값(단위는 macro_series seed 참조)."
 
       - name: securities
-        description: "종목 마스터(symbol → name, market). symbol 이 실제 어느 종목인지 해석하는 참조."
+        description: "종목 마스터(symbol → name, market). 수집 시 스냅샷 적재."
         meta:
           external_location: "{{ env_var('QUANT_DATA_DIR', '../data') }}/reference/securities/*.parquet"
         columns:

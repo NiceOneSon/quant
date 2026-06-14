@@ -30,6 +30,21 @@ with open(VIEWS_CONFIG, encoding="utf-8") as f:
 # schema = dbt 레이어, table = dbt 모델명. 파일이 없으면 건너뛴다(먼저 dbt build).
 for schema, tables in (cfg.get("schemas") or {}).items():
     con.execute(f'CREATE SCHEMA IF NOT EXISTS "{schema}"')
+
+    # views.yaml 에 없는 오래된 뷰를 제거 — 테이블 삭제·이름 변경 후 잔존 뷰 방지.
+    wanted = set(tables or {})
+    existing = {
+        row[0]
+        for row in con.execute(
+            "SELECT view_name FROM duckdb_views() "
+            "WHERE schema_name = ? AND internal = false",
+            [schema],
+        ).fetchall()
+    }
+    for stale in existing - wanted:
+        con.execute(f'DROP VIEW IF EXISTS "{schema}"."{stale}"')
+        print(f"[drop]  {schema}.{stale} (not in views.yaml)", flush=True)
+
     for table, relpath in (tables or {}).items():
         pattern = f"{DATA}/{relpath}"
         if glob.glob(pattern):
