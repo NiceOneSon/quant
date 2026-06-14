@@ -26,7 +26,7 @@ from quant.rates a
 join quant.rate_series da on a.sk_dim_rate_series = da.sk_id
 join quant.rates b      on a.date = b.date
 join quant.rate_series db on b.sk_dim_rate_series = db.sk_id
-where da.series = 'DGS10' and db.series = 'DGS2'
+where da.label = '미국채 10년' and db.label = '미국채 2년'
 order by a.date
 ```
 
@@ -40,7 +40,7 @@ order by a.date
 select f.date, d.label, f.rate
 from quant.rates f
 join quant.rate_series d on f.sk_dim_rate_series = d.sk_id
-where d.series in ('DFF', 'SOFR')
+where d.label in ('미 연방기금금리', 'SOFR (미국 익일 담보부)')
 order by f.date
 ```
 
@@ -69,13 +69,13 @@ from quant.rate_series d
 order by d.country, d.tenor
 ```
 
-<Dropdown data={series_list} name=sel value=series label=label defaultValue="IR3TIB01KRM156N"/>
+<Dropdown data={series_list} name=sel value=label label=label/>
 
 ```sql one
 select f.date, d.label, d.country, d.tenor, f.rate
 from quant.rates f
 join quant.rate_series d on f.sk_dim_rate_series = d.sk_id
-where d.series = '${inputs.sel.value}'
+where d.label = '${inputs.sel.value}'
 order by f.date
 ```
 

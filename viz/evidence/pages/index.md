@@ -20,15 +20,15 @@ select count(*) as members from quant.universe
 select f.rate
 from quant.rates f
 join quant.rate_series d on f.sk_dim_rate_series = d.sk_id
-where d.series = 'IR3TIB01KRM156N'
+where d.label = '한국 3개월 은행간'
 order by f.date desc
 limit 1
 ```
 
 ```sql kpi_macro
 select
-  max(case when d.series = 'USD/KRW' then f.value end) as usdkrw,
-  max(case when d.series = 'KS11'    then f.value end) as kospi
+  max(case when d.label = '달러-원 환율' then f.value end) as usdkrw,
+  max(case when d.label = 'KOSPI 지수'  then f.value end) as kospi
 from quant.macro f
 join quant.macro_series d on f.sk_dim_macro_series = d.sk_id
 where f.date = (select max(date) from quant.macro)
@@ -38,7 +38,7 @@ where f.date = (select max(date) from quant.macro)
 select f.value as vix
 from quant.macro f
 join quant.macro_series d on f.sk_dim_macro_series = d.sk_id
-where d.series = 'VIX'
+where d.label = 'VIX 변동성 지수'
 order by f.date desc
 limit 1
 ```

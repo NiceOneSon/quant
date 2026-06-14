@@ -14,23 +14,22 @@ order by u.universe
 <Dropdown data={universes} name=univ value=universe label=universe/>
 
 ```sql symbols
-select u.symbol, s.name, u.symbol || ' ' || s.name as label
+select u.name
 from quant.prices p
 join quant.universe u on p.sk_dim_universe_history = u.sk_id
-join quant.security s on u.symbol = s.symbol
 where u.universe = '${inputs.univ.value}'
-group by u.symbol, s.name
-order by u.symbol
+group by u.name
+order by u.name
 ```
 
-<Dropdown data={symbols} name=sym value=symbol label=label/>
+<Dropdown data={symbols} name=sym value=name label=name/>
 
 ```sql series
 select p.date, p.open, p.high, p.low, p.close, p.volume, p.is_halted
 from quant.prices p
 join quant.universe u on p.sk_dim_universe_history = u.sk_id
 where u.universe = '${inputs.univ.value}'
-  and u.symbol = '${inputs.sym.value}'
+  and u.name = '${inputs.sym.value}'
 order by p.date
 ```
 
@@ -49,7 +48,7 @@ select p.date, p.open, p.high, p.low, p.close, p.volume, p.is_halted
 from quant.prices p
 join quant.universe u on p.sk_dim_universe_history = u.sk_id
 where u.universe = '${inputs.univ.value}'
-  and u.symbol = '${inputs.sym.value}'
+  and u.name = '${inputs.sym.value}'
 order by p.date desc
 limit 10
 ```

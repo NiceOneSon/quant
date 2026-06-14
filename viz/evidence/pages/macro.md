@@ -179,17 +179,17 @@ order by f.date
 select series, label, unit, category, source from quant.macro_series order by category, series
 ```
 
-<Dropdown data={series_meta} name=sel value=series label=label defaultValue="USD/KRW"/>
+<Dropdown data={series_meta} name=sel value=label label=label/>
 
 ```sql one
 select f.date, f.value, d.label, d.unit, d.source, d.category
 from quant.macro f
 join quant.macro_series d on f.sk_dim_macro_series = d.sk_id
-where d.series = '${inputs.sel.value}'
+where d.label = '${inputs.sel.value}'
 order by f.date
 ```
 
-**{inputs.sel.value}** — {one[0].label} ({one[0].unit}) | 소스: {one[0].source} | 카테고리: {one[0].category}
+**{one[0].label}** ({one[0].unit}) | 소스: {one[0].source} | 카테고리: {one[0].category}
 
 <LineChart data={one} x=date y=value yAxisTitle="{one[0].unit}"/>
 
