@@ -40,3 +40,4 @@ seeds:
         unit: varchar
         country: varchar
         category: varchar
+        source: varchar

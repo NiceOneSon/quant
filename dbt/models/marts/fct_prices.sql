@@ -11,6 +11,7 @@ with base as (
     from {{ ref('int_prices_pit') }}
 )
 select
+    {{ dbt_utils.generate_surrogate_key(['date', 'universe', 'symbol'])               }} as sk_id,
     {{ dbt_utils.generate_surrogate_key(['symbol'])                                   }} as sk_dim_security,
     case when _membership_added is not null
         then {{ dbt_utils.generate_surrogate_key(['universe', 'symbol', '_added_str']) }}

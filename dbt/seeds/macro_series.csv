@@ -1,9 +1,26 @@
-series,label,unit,country,category
-USD/KRW,달러-원 환율,KRW,KR,fx
-USD/JPY,달러-엔 환율,JPY,JP,fx
-DTWEXBGS,달러인덱스 DXY,index,US,macro
-DCOILWTICO,WTI 원유가,USD/bbl,NA,commodity
-PCOPPUSDM,구리 현물가,USD/MT,NA,commodity
-KS11,KOSPI 지수,point,KR,index
-KS200,KOSPI200 지수,point,KR,index
-KQ11,KOSDAQ 지수,point,KR,index
+series,label,unit,country,category,source
+USD/KRW,달러-원 환율,KRW,KR,fx,fdr
+USD/JPY,달러-엔 환율,JPY,JP,fx,fdr
+EUR/USD,유로-달러 환율,USD,EU,fx,fdr
+USD/CNY,달러-위안 환율,CNY,CN,fx,fdr
+DTWEXBGS,달러인덱스 DXY,index,US,macro,fred
+VIX,VIX 변동성 지수,index,US,volatility,fdr
+BAMLH0A0HYM2EY,미국 HY OAS,%,US,credit,fred
+BAMLC0A0CM,미국 IG OAS,%,US,credit,fred
+CPIAUCSL,미국 CPI,index,US,macro,fred
+PCEPI,미국 PCE,index,US,macro,fred
+T10YIE,미국 10Y 기대인플레이션,%,US,macro,fred
+T5YIFR,미국 5y5y 기대인플레이션,%,US,macro,fred
+PAYEMS,미국 비농업 고용(NFP),thousands,US,macro,fred
+ICSA,미국 실업수당청구,thousands,US,macro,fred
+M2SL,미국 M2,billion USD,US,macro,fred
+WALCL,연준 대차대조표,million USD,US,macro,fred
+MYAGM2KRM189N,한국 M2,billion KRW,KR,macro,fred
+DCOILWTICO,WTI 원유가,USD/bbl,NA,commodity,fred
+DHHNGSP,천연가스,USD/MMBtu,NA,commodity,fred
+PCOPPUSDM,구리 현물가,USD/MT,NA,commodity,fred
+GOLDAMGBD228NLBM,금,USD/troy oz,NA,commodity,fred
+SLVPRUSD,은,USD/troy oz,NA,commodity,fred
+KS11,KOSPI 지수,point,KR,index,fdr
+KS200,KOSPI200 지수,point,KR,index,fdr
+KQ11,KOSDAQ 지수,point,KR,index,fdr

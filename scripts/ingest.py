@@ -6,16 +6,13 @@
   uv run python scripts/ingest.py --config configs/backtest.yaml --dataset universe --source csv
   # 2) 가격 — 유니버스 편입 이력 전체(상장폐지 포함)
   uv run python scripts/ingest.py --config configs/backtest.yaml --dataset prices --source fdr
-  # 3) 무위험금리 (FRED)
-  uv run python scripts/ingest.py --config configs/backtest.yaml \
-      --dataset rates --source fred --series DGS10
-  # 4) 매크로/FX/원자재/지수 (ELT: raw date/value → dbt 메타데이터 조인)
-  #   FDR: 'USD/KRW', 'KS11', 'KS200', 'KQ11'
+  # 3) 금리 — 특정 시리즈 또는 seed(rate_series.csv) 전체
+  uv run python scripts/ingest.py --config configs/backtest.yaml --dataset rates --series DGS10
+  uv run python scripts/ingest.py --config configs/backtest.yaml --dataset rates  # seed 전체 일괄
+  # 4) 매크로/FX/원자재/지수 — 특정 시리즈 또는 seed(macro_series.csv) 전체
   uv run python scripts/ingest.py --config configs/backtest.yaml \
       --dataset macro --source fdr --series USD/KRW
-  #   FRED: 'DTWEXBGS'(DXY), 'DCOILWTICO'(WTI), 'PCOPPUSDM'(구리)
-  uv run python scripts/ingest.py --config configs/backtest.yaml \
-      --dataset macro --source fred --series DCOILWTICO
+  uv run python scripts/ingest.py --config configs/backtest.yaml --dataset macro  # seed 전체 일괄
 
 저장: 유니버스 → data/reference/universe/<universe>.parquet
       가격     → data/processed/prices/<universe>.parquet
@@ -27,7 +24,9 @@ pykrx/fdr 소스는 `uv sync --extra data` 필요.
 from __future__ import annotations
 
 import argparse
+import csv
 from datetime import date
+from pathlib import Path
 
 from common.config import AppConfig, load_config
 from common.logging import get_logger
@@ -44,6 +43,20 @@ from data_layer.sources import CsvUniverseSource, PriceSource, UniverseSource
 from data_layer.universe import DEFAULT_DATA_DIR, universe_path
 
 log = get_logger(__name__)
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_SEED_MACRO = _REPO_ROOT / "dbt" / "seeds" / "macro_series.csv"
+_SEED_RATES = _REPO_ROOT / "dbt" / "seeds" / "rate_series.csv"
+
+
+def _read_macro_seed() -> list[dict[str, str]]:
+    with _SEED_MACRO.open(newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def _read_rate_seed() -> list[dict[str, str]]:
+    with _SEED_RATES.open(newline="") as f:
+        return list(csv.DictReader(f))
 
 
 def _ingest_universe(config: AppConfig, source_kind: str) -> None:
@@ -100,9 +113,7 @@ def _ingest_prices(config: AppConfig, source_kind: str) -> None:
     log.info("done | dataset=prices source=%s tickers=%d path=%s", source_kind, len(tickers), path)
 
 
-def _ingest_rates(config: AppConfig, source_kind: str, series: str) -> None:
-    if source_kind != "fred":
-        raise ValueError("금리는 현재 fred 소스만 지원합니다.")
+def _ingest_one_rate(config: AppConfig, series: str) -> None:
     from data_layer.fred_source import FredRateSource
 
     path = ingest_rates(
@@ -111,7 +122,21 @@ def _ingest_rates(config: AppConfig, source_kind: str, series: str) -> None:
         start=date.fromisoformat(config.data.start_date),
         end=date.fromisoformat(config.data.end_date),
     )
-    log.info("done | dataset=rates source=%s series=%s path=%s", source_kind, series, path)
+    log.info("done | dataset=rates source=fred series=%s path=%s", series, path)
+
+
+def _ingest_rates(config: AppConfig, series: str | None) -> None:
+    if series:
+        _ingest_one_rate(config, series)
+        return
+    # batch: seed 전체
+    rows = _read_rate_seed()
+    log.info("batch rates | seed=%s rows=%d", _SEED_RATES, len(rows))
+    for row in rows:
+        try:
+            _ingest_one_rate(config, row["series"])
+        except Exception:
+            log.exception("failed | series=%s", row["series"])
 
 
 def _ingest_securities(source_kind: str, market: str) -> None:
@@ -123,9 +148,7 @@ def _ingest_securities(source_kind: str, market: str) -> None:
     log.info("done | dataset=securities source=fdr market=%s path=%s", market, path)
 
 
-def _ingest_macro(config: AppConfig, source_kind: str, series: str) -> None:
-    if not series:
-        raise ValueError("매크로 수집에는 --series 가 필요합니다.")
+def _ingest_one_macro(config: AppConfig, source_kind: str, series: str) -> None:
     if source_kind == "fdr":
         from data_layer.fdr_source import FdrSeriesSource
 
@@ -146,6 +169,26 @@ def _ingest_macro(config: AppConfig, source_kind: str, series: str) -> None:
     log.info("done | dataset=macro source=%s series=%s path=%s", source_kind, series, path)
 
 
+def _ingest_macro(config: AppConfig, source_kind: str | None, series: str | None) -> None:
+    if series and source_kind:
+        _ingest_one_macro(config, source_kind, series)
+        return
+    if series and not source_kind:
+        raise ValueError("--series 지정 시 --source (fdr|fred) 도 필요합니다.")
+    # batch: seed 전체 (source 컬럼 우선, 없으면 --source 폴백)
+    rows = _read_macro_seed()
+    log.info("batch macro | seed=%s rows=%d", _SEED_MACRO, len(rows))
+    for row in rows:
+        src = row.get("source") or source_kind
+        if not src:
+            log.warning("skip | series=%s — source 불명 (seed에 source 컬럼 없음)", row["series"])
+            continue
+        try:
+            _ingest_one_macro(config, src, row["series"])
+        except Exception:
+            log.exception("failed | source=%s series=%s", src, row["series"])
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True, help="설정 이름 또는 경로 (예: dev)")
@@ -156,10 +199,15 @@ def main() -> None:
         help="수집 대상",
     )
     parser.add_argument(
-        "--source", choices=["csv", "pykrx", "fdr", "fred"], default="csv", help="수집 소스"
+        "--source",
+        choices=["csv", "pykrx", "fdr", "fred"],
+        default=None,
+        help="수집 소스 (macro/rates 단일 시리즈 시 필요; 배치 모드는 seed의 source 컬럼 사용)",
     )
     parser.add_argument(
-        "--series", default=DEFAULT_RISK_FREE_SERIES, help="FRED 금리 시리즈 (rates 용)"
+        "--series",
+        default=None,
+        help="수집할 시리즈. 생략하면 dbt seed CSV 전체를 일괄 수집(macro/rates 전용).",
     )
     parser.add_argument("--market", default="kospi", help="종목 마스터 시장 (securities 용)")
     args = parser.parse_args()
@@ -168,15 +216,15 @@ def main() -> None:
     config = load_config(name)
 
     if args.dataset == "universe":
-        _ingest_universe(config, args.source)
+        _ingest_universe(config, args.source or "csv")
     elif args.dataset == "prices":
-        _ingest_prices(config, args.source)
+        _ingest_prices(config, args.source or "fdr")
     elif args.dataset == "rates":
-        _ingest_rates(config, args.source, args.series)
+        _ingest_rates(config, args.series)
     elif args.dataset == "macro":
         _ingest_macro(config, args.source, args.series)
     else:
-        _ingest_securities(args.source, args.market)
+        _ingest_securities(args.source or "fdr", args.market)
 
 
 if __name__ == "__main__":
