@@ -103,14 +103,14 @@ docker compose down
 
 | UI | URL | 성격 |
 |---|---|---|
-| **DuckDB UI** | http://localhost:4213 | SQL 노트북 + 즉석 차트(탐색). `marts.fct_prices`·`marts.dim_universe`·`marts.fct_rates` 뷰 자동 등록 |
+| **DuckDB UI** | http://localhost:4213 | SQL 노트북 + 즉석 차트(탐색). `fct_prices`·`dim_universe`·`fct_rates` 뷰(main 스키마) 자동 등록 |
 | **Evidence** | http://localhost:3000 | 코드형 BI 대시보드(`viz/evidence/pages/*.md`). 가격·유니버스·금리 페이지 |
 
 - `data/` 는 **읽기전용** 마운트(시각화 전용).
 - DuckDB UI 프런트엔드는 `ui.duckdb.org` 에서 로드(데이터는 로컬, 인터넷 필요).
 - Evidence 대시보드 저작은 핫리로드로: `cd viz/evidence && npm install && npm run dev`.
-- DuckDB UI 뷰 매핑은 `docker/duckdb-ui/views.yaml`(schema=dbt 레이어, table=모델명).
-- 예) `select date, close from marts.fct_prices where universe = 'kospi40' and symbol = '005930'`
+- DuckDB UI 뷰 매핑은 `docker/duckdb-ui/views.yaml`(main 스키마, table=dbt 모델명).
+- 예) `select date, close from fct_prices where universe = 'kospi40' and symbol = '005930'`
 
 ---
 

@@ -29,7 +29,8 @@
       "Bash(echo \"deploy: $?\")",
       "Bash(/usr/bin/curl -sSL -o /dev/null -w \"/prices -> %{http_code}\\\\n\" http://localhost:3000/prices)",
       "Bash(/usr/bin/curl -sS -o /dev/null -w \"duckdb-ui :4213 -> %{http_code}\\\\n\" http://localhost:4213/)",
-      "Bash(docker volume *)"
+      "Bash(docker volume *)",
+      "Bash(.venv/bin/dbt parse *)"
     ]
   }
 }

@@ -7,14 +7,57 @@ sources:
       위치는 QUANT_DATA_DIR 환경변수로 주입(기본: 이 레포의 ../data).
     tables:
       - name: prices
-        description: "일별 OHLCV(수정주가). universe·symbol 키 포함."
+        description: "일별 OHLCV(수정주가). 한 행 = (universe, symbol, date)."
         meta:
           external_location: "{{ env_var('QUANT_DATA_DIR', '../data') }}/processed/prices/*.parquet"
+        columns:
+          - name: universe
+            description: "유니버스 식별자(예: kospi40). 어느 종목 집합으로 수집한 가격인지."
+          - name: symbol
+            description: "KRX 6자리 상장코드(0패딩 문자열, 예 '005930'). 종목 식별·조인 키(universe.symbol 과 동일)."
+          - name: date
+            description: "거래일."
+          - name: open
+            description: "시가(수정주가, KRW)."
+          - name: high
+            description: "고가(수정주가, KRW)."
+          - name: low
+            description: "저가(수정주가, KRW)."
+          - name: close
+            description: "종가(수정주가, KRW). 분할·배당 반영."
+          - name: volume
+            description: "거래량(주)."
+          - name: close_raw
+            description: "원본(미수정) 종가. 무료 벤더 미제공 시 null(수정계수 복원 불가)."
+          - name: is_halted
+            description: "거래정지/무거래(거래량 0). 백테스트는 이 날 체결 불가로 본다."
+
       - name: universe
-        description: "Point-in-time 유니버스 멤버십 구간."
+        description: >
+          Point-in-time 유니버스 멤버십 구간. 한 행 = "symbol 이 universe 에 [added, removed) 동안 편입".
+          상장폐지·편출 종목도 그 시점 이력을 보존 → 생존편향 방지.
         meta:
           external_location: "{{ env_var('QUANT_DATA_DIR', '../data') }}/reference/universe/*.parquet"
+        columns:
+          - name: universe
+            description: "유니버스 식별자(예: kospi40, kospi). 이 멤버십이 속한 종목 집합의 이름."
+          - name: symbol
+            description: "KRX 6자리 상장코드(0패딩 문자열). 어느 종목인지. prices.symbol 과 동일 키."
+          - name: added
+            description: "편입일(구간 시작, 반개구간 [added, removed) 의 시작)."
+          - name: removed
+            description: "편출일. null 이면 현재까지 편입 유지. 상장폐지·편출 시점."
+
       - name: rates
-        description: "금리 시리즈(무위험·국채). series·country 키 포함."
+        description: "금리 시리즈(무위험·국채). 한 행 = (series, date) 의 연율."
         meta:
           external_location: "{{ env_var('QUANT_DATA_DIR', '../data') }}/reference/rates/*.parquet"
+        columns:
+          - name: date
+            description: "관측일."
+          - name: series
+            description: "FRED 시리즈 코드(예: DGS10, IR3TIB01KRM156N). 시리즈 식별 키."
+          - name: country
+            description: "국가 구분(KR/US/NA). 한국채 vs 미국채 구별."
+          - name: rate
+            description: "연율 퍼센트(예: 3.65 = 3.65%)."
