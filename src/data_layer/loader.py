@@ -17,7 +17,7 @@ from pathlib import Path
 
 import polars as pl
 
-from data_layer.universe import DEFAULT_DATA_DIR
+from data_layer.universe import DEFAULT_DATA_DIR, default_marts_dir
 
 # 저장 스키마. 컬럼 순서·타입의 단일 출처.
 # universe = 어느 유니버스의 가격인지 구분 키(filename 대신 명시적 컬럼).
@@ -49,17 +49,16 @@ def load_prices(
     start: str | date | None = None,
     end: str | date | None = None,
     *,
-    data_dir: Path | None = None,
+    marts_dir: Path | None = None,
 ) -> pl.DataFrame:
-    """저장된 `universe` 가격 데이터를 조회한다 (수정주가 + 원본 + 거래정지 플래그).
+    """dbt 마트(fct_prices)에서 `universe` 가격을 조회한다 (수정주가 + 거래정지 + PIT 플래그).
 
-    start/end 가 주어지면 해당 구간으로 필터한다. 반환 스키마는 PRICE_SCHEMA.
-    파일이 없으면 먼저 `scripts/ingest.py --dataset prices` 로 수집해야 한다.
+    소비 레이어는 raw 가 아니라 dbt 마트를 읽는다 → 먼저 `dbt build`. start/end 로 구간 필터.
     """
-    path = prices_path(universe, data_dir)
+    path = (marts_dir or default_marts_dir()) / "fct_prices.parquet"
     if not path.exists():
-        raise FileNotFoundError(f"가격 데이터 파일이 없습니다: {path} — 먼저 ingest 로 수집하세요.")
-    df = pl.read_parquet(path)
+        raise FileNotFoundError(f"마트가 없습니다: {path} — dbt build 로 생성하세요(dbt/).")
+    df = pl.read_parquet(path).filter(pl.col("universe") == universe)
     if start is not None:
         df = df.filter(pl.col("date") >= _parse(start))
     if end is not None:

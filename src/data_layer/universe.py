@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -18,6 +19,14 @@ import polars as pl
 # 저장소 규약: point-in-time 멤버십은 reference 데이터로 parquet 에 보관한다.
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATA_DIR = REPO_ROOT / "data"
+
+
+def default_marts_dir() -> Path:
+    """dbt 마트 출력 디렉터리. QUANT_MARTS_DIR 환경변수 우선(없으면 data/marts)."""
+    env = os.environ.get("QUANT_MARTS_DIR")
+    return Path(env) if env else DEFAULT_DATA_DIR / "marts"
+
+
 # 저장 스키마 — removed 는 null 허용(아직 편입 유지).
 _SCHEMA: dict[str, pl.DataType] = {
     "symbol": pl.String(),
@@ -109,16 +118,15 @@ def frame_to_memberships(df: pl.DataFrame) -> list[Membership]:
     ]
 
 
-def load_universe(name: str, *, data_dir: Path | None = None) -> list[Membership]:
-    """이름으로 point-in-time 멤버십 테이블을 로드한다 (예: 'kospi200').
+def load_universe(name: str, *, marts_dir: Path | None = None) -> list[Membership]:
+    """dbt 마트(dim_universe)에서 `name` 유니버스의 point-in-time 멤버십을 로드한다.
 
-    저장된 reference parquet 을 읽어 멤버십 구간으로 복원한다. 이 데이터는 편출·상장폐지
-    이력을 포함하므로(생존편향 방지), members_asof 로 그 시점 구성종목을 그대로 조회할 수
-    있다. 파일이 없으면 먼저 `scripts/ingest.py` 로 수집해야 한다.
+    소비 레이어는 raw 가 아니라 dbt 마트를 읽는다 → 먼저 `dbt build` 로 마트를 생성해야 한다.
+    편출·상장폐지 이력을 포함하므로(생존편향 방지) members_asof 로 그 시점 구성종목을 조회한다.
+    (수집 파이프라인 내부에서 raw 멤버십이 필요하면 universe_path 로 직접 읽는다.)
     """
-    path = universe_path(name, data_dir)
+    path = (marts_dir or default_marts_dir()) / "dim_universe.parquet"
     if not path.exists():
-        raise FileNotFoundError(
-            f"유니버스 멤버십 파일이 없습니다: {path} — 먼저 ingest 로 수집하세요."
-        )
-    return frame_to_memberships(pl.read_parquet(path))
+        raise FileNotFoundError(f"마트가 없습니다: {path} — dbt build 로 생성하세요(dbt/).")
+    df = pl.read_parquet(path).filter(pl.col("universe") == name)
+    return frame_to_memberships(df)

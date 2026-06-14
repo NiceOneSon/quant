@@ -61,8 +61,13 @@ uv run python scripts/ingest.py --config configs/backtest.yaml --dataset rates -
 PIT-안전 수직 슬라이스: 모멘텀 → 상위 N 동일가중 롱온리 → **t+1 시가 체결(거래비용·슬리피지
 반영, 거래정지 제외)** → 지표(CAGR/Sharpe/MDD).
 
+**소비자(백테스트·대시보드)는 raw 가 아니라 dbt 마트를 읽는다** → 수집 후 `dbt build` 필요:
+
 ```bash
-# 먼저 동일 이름으로 universe + prices 를 수집해야 함
+# 1) 수집(raw)         2) dbt 변환(마트)        3) 백테스트(마트 소비)
+uv run python scripts/ingest.py --config configs/backtest.yaml --dataset universe --source fdr
+uv run python scripts/ingest.py --config configs/backtest.yaml --dataset prices   --source fdr
+( cd dbt && . .venv/bin/activate && dbt build --profiles-dir . )
 uv run python scripts/backtest.py --config configs/backtest.yaml
 ```
 
@@ -98,13 +103,14 @@ docker compose down
 
 | UI | URL | 성격 |
 |---|---|---|
-| **DuckDB UI** | http://localhost:4213 | SQL 노트북 + 즉석 차트(탐색). `prices/universe/rates` 뷰 자동 등록 |
+| **DuckDB UI** | http://localhost:4213 | SQL 노트북 + 즉석 차트(탐색). `marts.fct_prices`·`marts.dim_universe`·`marts.fct_rates` 뷰 자동 등록 |
 | **Evidence** | http://localhost:3000 | 코드형 BI 대시보드(`viz/evidence/pages/*.md`). 가격·유니버스·금리 페이지 |
 
 - `data/` 는 **읽기전용** 마운트(시각화 전용).
 - DuckDB UI 프런트엔드는 `ui.duckdb.org` 에서 로드(데이터는 로컬, 인터넷 필요).
 - Evidence 대시보드 저작은 핫리로드로: `cd viz/evidence && npm install && npm run dev`.
-- 예) `select date, close from prices where universe = 'kospi40' and symbol = '005930'`
+- DuckDB UI 뷰 매핑은 `docker/duckdb-ui/views.yaml`(schema=dbt 레이어, table=모델명).
+- 예) `select date, close from marts.fct_prices where universe = 'kospi40' and symbol = '005930'`
 
 ---
 

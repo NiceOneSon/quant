@@ -25,7 +25,11 @@
       "Bash(../.venv/bin/python -c \"import polars as pl; print\\(pl.read_parquet\\('../data/marts/fct_rates.parquet'\\).filter\\(pl.col\\('series'\\)=='DGS10'\\).head\\(2\\).select\\(['date','series','country','label','tenor','rate']\\)\\)\")",
       "Bash(.venv/bin/python -c \"import duckdb; print\\(duckdb.sql\\(\\\\\"select series,country,label,tenor,rate from '../data/marts/fct_rates.parquet' where series='DGS10' limit 2\\\\\"\\).fetchall\\(\\)\\)\")",
       "Bash(.venv/bin/dbt ls *)",
-      "Bash(.venv/bin/python -c \"import duckdb; print\\(duckdb.sql\\(\\\\\"select universe, count\\(*\\) n, sum\\(case when is_member_asof then 1 else 0 end\\) member_rows from '../data/marts/fct_prices.parquet' group by universe\\\\\"\\).fetchall\\(\\)\\)\")"
+      "Bash(.venv/bin/python -c \"import duckdb; print\\(duckdb.sql\\(\\\\\"select universe, count\\(*\\) n, sum\\(case when is_member_asof then 1 else 0 end\\) member_rows from '../data/marts/fct_prices.parquet' group by universe\\\\\"\\).fetchall\\(\\)\\)\")",
+      "Bash(echo \"deploy: $?\")",
+      "Bash(/usr/bin/curl -sSL -o /dev/null -w \"/prices -> %{http_code}\\\\n\" http://localhost:3000/prices)",
+      "Bash(/usr/bin/curl -sS -o /dev/null -w \"duckdb-ui :4213 -> %{http_code}\\\\n\" http://localhost:4213/)",
+      "Bash(docker volume *)"
     ]
   }
 }

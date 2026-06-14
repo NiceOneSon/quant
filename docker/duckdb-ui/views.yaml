@@ -1,0 +1,12 @@
+# DuckDB UI 에 등록할 뷰 정의.
+#   db   : 기본(main) 그대로 — 별도 attach 안 함.
+#   schema = dbt 레이어 (marts / staging / ...).
+#   table  = dbt 모델명 (마트명과 동일).
+#   값     = DATA_DIR 기준 parquet 경로.
+# 새 레이어/모델은 여기에 추가하면 됨(서버 코드 수정 불필요).
+default_schema: marts # UI 연결의 기본 스키마(search_path) → 접두어 없이 fct_prices 조회
+schemas:
+  marts:
+    fct_prices: marts/fct_prices.parquet
+    dim_universe: marts/dim_universe.parquet
+    fct_rates: marts/fct_rates.parquet

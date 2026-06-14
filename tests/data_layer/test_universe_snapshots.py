@@ -1,15 +1,25 @@
 from datetime import date
 from pathlib import Path
 
+import polars as pl
 import pytest
 
 from data_layer.ingest import ingest_universe_snapshot
-from data_layer.universe import Membership, load_universe, members_asof
+from data_layer.universe import (
+    Membership,
+    frame_to_memberships,
+    members_asof,
+    universe_path,
+)
 from data_layer.universe_snapshots import (
     load_snapshots,
     rebuild_universe,
     record_snapshot,
 )
+
+
+def _raw_members(name: str, tmp: Path) -> list[Membership]:
+    return frame_to_memberships(pl.read_parquet(universe_path(name, tmp)))
 
 
 def test_record_snapshot_is_idempotent_per_asof(tmp_path: Path) -> None:
@@ -27,7 +37,7 @@ def test_rebuild_reconstructs_membership_intervals(tmp_path: Path) -> None:
     record_snapshot("u", date(2024, 2, 1), ["A", "C"], data_dir=tmp_path)
     rebuild_universe("u", data_dir=tmp_path)
 
-    members = load_universe("u", data_dir=tmp_path)
+    members = _raw_members("u", tmp_path)
     got = {(m.symbol, m.added, m.removed) for m in members}
     assert got == {
         ("A", date(2024, 1, 1), None),
@@ -50,7 +60,7 @@ def test_ingest_universe_snapshot_accumulates(tmp_path: Path) -> None:
     ingest_universe_snapshot(_FakeSource(["A", "B"]), "kospi", date(2024, 1, 1), data_dir=tmp_path)
     ingest_universe_snapshot(_FakeSource(["A", "C"]), "kospi", date(2024, 2, 1), data_dir=tmp_path)
 
-    members = load_universe("kospi", data_dir=tmp_path)
+    members = _raw_members("kospi", tmp_path)
     assert members_asof(members, "2024-01-15") == {"A", "B"}
     assert members_asof(members, "2024-02-15") == {"A", "C"}
 

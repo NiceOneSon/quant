@@ -5,7 +5,7 @@ import polars as pl
 import pytest
 
 from data_layer.ingest import ingest_prices, normalize_prices
-from data_layer.loader import PRICE_SCHEMA, load_prices
+from data_layer.loader import PRICE_SCHEMA, load_prices, prices_path
 
 
 class _FakePriceSource:
@@ -34,7 +34,8 @@ def test_normalize_prices_flags_halt_and_matches_schema() -> None:
     assert out["is_halted"].to_list() == [False, True]
 
 
-def test_ingest_load_roundtrip(tmp_path: Path) -> None:
+def test_ingest_writes_raw_prices(tmp_path: Path) -> None:
+    # ingest 는 raw parquet 을 적재한다(dbt 이전). raw 를 직접 검증.
     ingest_prices(
         _FakePriceSource(),
         "kospi200",
@@ -43,30 +44,38 @@ def test_ingest_load_roundtrip(tmp_path: Path) -> None:
         date(2020, 1, 31),
         data_dir=tmp_path,
     )
-    df = load_prices("kospi200", data_dir=tmp_path)
-
-    assert set(df["universe"].to_list()) == {"kospi200"}  # 명시적 유니버스 키
+    df = pl.read_parquet(prices_path("kospi200", tmp_path))
+    assert set(df["universe"].to_list()) == {"kospi200"}
     assert set(df["symbol"].unique().to_list()) == {"AAA", "BBB"}
-    assert df.filter(pl.col("symbol") == "AAA").height == 2
-    # 원본 종가가 함께 저장돼 수정계수(close/close_raw) 복원이 가능해야 한다
     assert "close_raw" in df.columns
-    # 거래정지일이 표시돼야 한다
     assert df.filter(pl.col("is_halted"))["volume"].to_list() == [0, 0]
 
 
-def test_load_prices_date_filter(tmp_path: Path) -> None:
-    ingest_prices(
-        _FakePriceSource(),
-        "kospi200",
-        ["AAA"],
-        date(2020, 1, 1),
-        date(2020, 1, 31),
-        data_dir=tmp_path,
-    )
-    df = load_prices("kospi200", start="2020-01-03", data_dir=tmp_path)
-    assert df["date"].to_list() == [date(2020, 1, 3)]
+def _write_prices_mart(marts: Path) -> None:
+    marts.mkdir(parents=True, exist_ok=True)
+    pl.DataFrame(
+        {
+            "universe": ["kospi200", "kospi200", "other"],
+            "symbol": ["AAA", "AAA", "ZZZ"],
+            "date": [date(2020, 1, 2), date(2020, 1, 3), date(2020, 1, 2)],
+            "close": [102.0, 101.0, 50.0],
+        }
+    ).write_parquet(marts / "fct_prices.parquet")
 
 
-def test_load_missing_prices_raises(tmp_path: Path) -> None:
+def test_load_prices_filters_universe_and_dates(tmp_path: Path) -> None:
+    # 소비 레이어(load_prices)는 dbt 마트를 읽고 universe 로 필터.
+    marts = tmp_path / "marts"
+    _write_prices_mart(marts)
+
+    df = load_prices("kospi200", marts_dir=marts)
+    assert set(df["universe"].to_list()) == {"kospi200"}  # other 유니버스 제외
+    assert df.height == 2
+
+    df2 = load_prices("kospi200", start="2020-01-03", marts_dir=marts)
+    assert df2["date"].to_list() == [date(2020, 1, 3)]
+
+
+def test_load_prices_requires_mart(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
-        load_prices("does_not_exist", data_dir=tmp_path)
+        load_prices("does_not_exist", marts_dir=tmp_path)

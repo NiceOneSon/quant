@@ -34,7 +34,7 @@ from data_layer.ingest import (
     ingest_universe_snapshot,
 )
 from data_layer.sources import CsvUniverseSource, PriceSource, UniverseSource
-from data_layer.universe import DEFAULT_DATA_DIR, load_universe
+from data_layer.universe import DEFAULT_DATA_DIR, universe_path
 
 log = get_logger(__name__)
 
@@ -77,9 +77,12 @@ def _ingest_prices(config: AppConfig, source_kind: str) -> None:
         raise ValueError("가격 수집은 pykrx 또는 fdr 소스만 지원합니다.")
 
     universe = config.data.universe
-    # 유니버스에 한 번이라도 편입된 모든 종목 (상장폐지 포함 → 생존편향 방지)
-    members = load_universe(universe)
-    tickers = sorted({m.symbol for m in members})
+    # 가격 수집은 dbt 이전 단계 → raw 유니버스(universe_path)에서 종목 목록을 읽는다.
+    # (상장폐지 포함 → 생존편향 방지)
+    import polars as pl
+
+    raw_universe = pl.read_parquet(universe_path(universe))
+    tickers = sorted(raw_universe["symbol"].unique().to_list())
     path = ingest_prices(
         price_source,
         universe,

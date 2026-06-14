@@ -13,7 +13,7 @@ from pathlib import Path
 
 import polars as pl
 
-from data_layer.universe import DEFAULT_DATA_DIR
+from data_layer.universe import DEFAULT_DATA_DIR, default_marts_dir
 
 # 저장 스키마. rate 는 연율 퍼센트(예: 3.65 = 3.65%).
 # series = 시리즈 식별 키(FRED 코드), country = 국가 구분(KR/US/...). 여러 시리즈를
@@ -54,16 +54,16 @@ def load_rates(
     start: str | date | None = None,
     end: str | date | None = None,
     *,
-    data_dir: Path | None = None,
+    marts_dir: Path | None = None,
 ) -> pl.DataFrame:
-    """저장된 `series` 무위험금리를 조회한다 (date, rate[연율 %]).
+    """dbt 마트(fct_rates)에서 `series` 금리를 조회한다 (date, series, country, label, tenor, rate).
 
-    파일이 없으면 먼저 `scripts/ingest.py --dataset rates` 로 수집해야 한다.
+    소비 레이어는 dbt 마트를 읽는다 → 먼저 `dbt build`. start/end 로 구간 필터.
     """
-    path = rates_path(series, data_dir)
+    path = (marts_dir or default_marts_dir()) / "fct_rates.parquet"
     if not path.exists():
-        raise FileNotFoundError(f"금리 데이터 파일이 없습니다: {path} — 먼저 ingest 로 수집하세요.")
-    df = pl.read_parquet(path)
+        raise FileNotFoundError(f"마트가 없습니다: {path} — dbt build 로 생성하세요(dbt/).")
+    df = pl.read_parquet(path).filter(pl.col("series") == series)
     if start is not None:
         df = df.filter(pl.col("date") >= _parse(start))
     if end is not None:

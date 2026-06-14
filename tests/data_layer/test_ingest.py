@@ -1,11 +1,24 @@
 from datetime import date
 from pathlib import Path
 
+import polars as pl
 import pytest
 
 from data_layer.ingest import ingest_universe, normalize_memberships
 from data_layer.sources import CsvUniverseSource
-from data_layer.universe import Membership, load_universe, members_asof
+from data_layer.universe import (
+    Membership,
+    frame_to_memberships,
+    load_universe,
+    members_asof,
+    universe_path,
+)
+
+
+def _raw_members(name: str, tmp: Path) -> list[Membership]:
+    """ingest 가 적재한 raw 유니버스(dbt 이전)를 직접 읽어 멤버십으로 복원."""
+    return frame_to_memberships(pl.read_parquet(universe_path(name, tmp)))
+
 
 _CSV = (
     "symbol,added,removed\n"
@@ -22,9 +35,9 @@ def _make_source(tmp_path: Path) -> CsvUniverseSource:
     return CsvUniverseSource(raw_dir)
 
 
-def test_ingest_load_roundtrip_preserves_pit(tmp_path: Path) -> None:
+def test_ingest_writes_raw_pit_universe(tmp_path: Path) -> None:
     ingest_universe(_make_source(tmp_path), "kospi200", data_dir=tmp_path)
-    members = load_universe("kospi200", data_dir=tmp_path)
+    members = _raw_members("kospi200", tmp_path)
 
     assert {m.symbol for m in members} == {"AAA", "BBB", "CCC"}
     # 저장→로드 후에도 시점 조회가 생존편향 없이 동작해야 한다
@@ -70,13 +83,14 @@ def test_historical_csv_injection_reentry(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     ingest_universe(CsvUniverseSource(raw_dir), "hist", data_dir=tmp_path)
-    members = load_universe("hist", data_dir=tmp_path)
+    members = _raw_members("hist", tmp_path)
 
     assert members_asof(members, "2012-01-01") == {"005930", "068270"}
     assert members_asof(members, "2016-01-01") == {"005930"}  # 편출 구간
     assert members_asof(members, "2019-01-01") == {"005930", "068270"}  # 재편입 후
 
 
-def test_load_missing_universe_raises(tmp_path: Path) -> None:
+def test_load_universe_requires_mart(tmp_path: Path) -> None:
+    # 소비 레이어(load_universe)는 dbt 마트를 읽음 → 마트 없으면 에러
     with pytest.raises(FileNotFoundError):
-        load_universe("does_not_exist", data_dir=tmp_path)
+        load_universe("does_not_exist", marts_dir=tmp_path)
