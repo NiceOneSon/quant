@@ -2,11 +2,11 @@
 title: 매크로
 ---
 
-FX·달러인덱스·원자재·지수·크레딧·인플레이션 시계열. `dim_macro_series` 조인으로 label/category 보강.
+FX·달러인덱스·원자재·지수·크레딧·인플레이션 시계열. `dim_macro_series` 조인으로 label/category/source 보강.
 
 ```sql latest
 select
-  d.category, d.series, d.label, d.unit,
+  d.category, d.series, d.label, d.unit, d.source,
   max(f.date)                             as latest_date,
   last(f.value order by f.date)           as latest_value
 from quant.macro f
@@ -148,20 +148,20 @@ order by f.date
 ## 시리즈별 조회
 
 ```sql series_meta
-select series, label, unit, category from quant.macro_series order by category, series
+select series, label, unit, category, source from quant.macro_series order by category, series
 ```
 
 <Dropdown data={series_meta} name=sel value=series label=label defaultValue="USD/KRW"/>
 
 ```sql one
-select f.date, f.value, d.label, d.unit
+select f.date, f.value, d.label, d.unit, d.source, d.category
 from quant.macro f
 join quant.macro_series d on f.sk_dim_macro_series = d.sk_id
 where d.series = '${inputs.sel.value}'
 order by f.date
 ```
 
-**{inputs.sel.value}** — {one[0].label} ({one[0].unit})
+**{inputs.sel.value}** — {one[0].label} ({one[0].unit}) | 소스: {one[0].source} | 카테고리: {one[0].category}
 
 <LineChart data={one} x=date y=value yAxisTitle="{one[0].unit}"/>
 
