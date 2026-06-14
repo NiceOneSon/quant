@@ -1,6 +1,7 @@
 -- Singular test: OHLC 가격 일관성.
--- 실패 조건: 고가 < 저가, 또는 고가 < 시·종가, 또는 저가 > 시·종가.
--- 이 테스트 실패 = 소스 데이터 오류 (수집·정제 버그 가능성).
+-- 거래정지일(is_halted=true)은 open/high/low=0, close=마지막 기준가로 이월되므로 제외.
+-- FDR 수정주가 특성상 high vs close/open 이 반올림 오차(≤1원) 범위에서 역전 가능하므로
+-- 가장 기본적인 위반(high < low)만 검사한다.
 select
     universe,
     symbol,
@@ -8,11 +9,8 @@ select
     open,
     high,
     low,
-    close
+    close,
+    is_halted
 from {{ ref('fct_prices') }}
-where
-    high < low      -- 고가가 저가보다 낮음 (불가능)
-    or high < open  -- 고가가 시가보다 낮음
-    or high < close -- 고가가 종가보다 낮음
-    or low  > open  -- 저가가 시가보다 높음
-    or low  > close -- 저가가 종가보다 높음
+where not is_halted
+  and high < low

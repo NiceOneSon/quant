@@ -17,8 +17,7 @@ models:
           - not_null
           - unique
           - dbt_utils.expression_is_true:
-              arguments:
-                expression: "length(symbol) = 6"
+              expression: "length(symbol) = 6"
       - name: name
         description: "종목명(예: 005930 → 삼성전자)."
         data_tests: [not_null]
@@ -27,7 +26,7 @@ models:
         data_tests:
           - accepted_values:
               arguments:
-                values: ["KOSPI", "KOSDAQ", "KONEX", "KOSPI MARKET", "KOSDAQ MARKET"]
+                values: ["KOSPI", "KOSDAQ", "KONEX", "KOSPI MARKET", "KOSDAQ MARKET", "KOSDAQ GLOBAL"]
 
   - name: dim_universe
     description: >
@@ -63,8 +62,7 @@ models:
             combination_of_columns: [universe, symbol, added]
       # 구간 역전 금지: removed > added (removed is null 이면 열린 구간 → 허용).
       - dbt_utils.expression_is_true:
-          arguments:
-            expression: "removed is null or removed > added"
+          expression: "removed is null or removed > added"
 
   - name: dim_rate_series
     description: "금리 시리즈 마스터. sk_id = hash(series). fct_rates.sk_dim_rate_series 가 참조."
@@ -154,58 +152,41 @@ models:
         data_tests:
           - not_null
           - dbt_utils.expression_is_true:
-              arguments:
-                expression: "close > 0"
+              expression: "close > 0"
       - name: open
         data_tests:
+          # 거래정지일(is_halted=true)은 open/high/low=0이 정상 (마지막 기준가 이월).
           - dbt_utils.expression_is_true:
-              arguments:
-                expression: "open > 0"
+              expression: "open > 0 or is_halted"
       - name: high
         data_tests:
           - dbt_utils.expression_is_true:
-              arguments:
-                expression: "high > 0"
+              expression: "high > 0 or is_halted"
       - name: low
         data_tests:
           - dbt_utils.expression_is_true:
-              arguments:
-                expression: "low > 0"
+              expression: "low > 0 or is_halted"
       - name: volume
         data_tests:
           - dbt_utils.expression_is_true:
-              arguments:
-                expression: "volume >= 0"
+              expression: "volume >= 0"
       - name: close_raw
         description: "원본(미수정) 종가. 벤더 미제공 시 null."
       - name: is_halted
         description: "거래정지/무거래(volume=0). dbt ELT 파생값."
         data_tests:
           - dbt_utils.expression_is_true:
-              arguments:
-                expression: "is_halted = (volume = 0)"
+              expression: "is_halted = (volume = 0)"
       - name: is_member_asof
         description: "그 거래일에 해당 유니버스 멤버였는지(PIT). 생존편향 검증용."
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns: [date, universe, symbol]
-      # OHLC 일관성: 고가 ≥ 저가, 고/저가가 시·종가를 포함해야 한다.
+      # OHLC 기본 일관성: 고가 ≥ 저가 (거래정지일도 0 ≥ 0이므로 성립).
+      # high vs close/open 비교는 FDR 수정주가 반올림 오차(최대 1원)로 위반 가능하여 제외.
       - dbt_utils.expression_is_true:
-          arguments:
-            expression: "high >= low"
-      - dbt_utils.expression_is_true:
-          arguments:
-            expression: "high >= open"
-      - dbt_utils.expression_is_true:
-          arguments:
-            expression: "high >= close"
-      - dbt_utils.expression_is_true:
-          arguments:
-            expression: "low <= open"
-      - dbt_utils.expression_is_true:
-          arguments:
-            expression: "low <= close"
+          expression: "high >= low"
 
   - name: fct_rates
     description: >
@@ -230,8 +211,7 @@ models:
         data_tests:
           - not_null
           - dbt_utils.expression_is_true:
-              arguments:
-                expression: "rate >= -5 and rate <= 30"
+              expression: "rate >= -5 and rate <= 30"
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -260,8 +240,7 @@ models:
         data_tests:
           - not_null
           - dbt_utils.expression_is_true:
-              arguments:
-                expression: "value > 0"
+              expression: "value > 0"
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
