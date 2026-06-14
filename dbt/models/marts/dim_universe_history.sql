@@ -9,6 +9,12 @@ with with_sk as (
     select
         {{ dbt_utils.generate_surrogate_key(['universe', 'symbol', 'added']) }} as sk_id,
         universe,
+        case universe
+            when 'kospi40'  then 'KOSPI 40'
+            when 'kospi100' then 'KOSPI 100'
+            when 'kospi200' then 'KOSPI 200'
+            else universe
+        end as universe_name,
         symbol,
         added   as valid_from,
         removed as valid_to,
@@ -18,6 +24,7 @@ with with_sk as (
 select
     w.sk_id,
     w.universe,
+    w.universe_name,
     w.symbol,
     s.name,
     w.valid_from,

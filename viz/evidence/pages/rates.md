@@ -64,7 +64,7 @@ order by d.country, d.tenor, f.date
 ## 시리즈별 조회
 
 ```sql series_list
-select d.series, d.label, d.country, d.tenor
+select d.label, d.country, d.tenor
 from quant.rate_series d
 order by d.country, d.tenor
 ```

@@ -6,7 +6,7 @@
 QUANT_ROOT  ?= $(CURDIR)
 DBT_BIN     ?= $(QUANT_ROOT)/dbt/.venv/bin/dbt
 
-.PHONY: dbt-deps dbt-seed dbt-run dbt-test dbt-build dbt-docs dbt-clean
+.PHONY: dbt-deps dbt-seed dbt-run dbt-test dbt-build dbt-docs dbt-clean evidence-sync-pages
 
 dbt-deps:
 	cd $(QUANT_ROOT)/dbt && $(DBT_BIN) deps
@@ -26,6 +26,15 @@ dbt-build:
 	rm -rf $(QUANT_ROOT)/viz/evidence/.evidence/template/static/data/quant/
 	rm -rf $(QUANT_ROOT)/viz/evidence/.evidence/meta/query-cache/
 	rm -rf $(QUANT_ROOT)/viz/evidence/.evidence/template/.evidence-queries/
+	$(MAKE) evidence-sync-pages
+
+evidence-sync-pages:
+	$(eval EVID := $(QUANT_ROOT)/viz/evidence)
+	cp $(EVID)/pages/index.md    $(EVID)/.evidence/template/src/pages/+page.md
+	cp $(EVID)/pages/rates.md    $(EVID)/.evidence/template/src/pages/rates/+page.md
+	cp $(EVID)/pages/macro.md    $(EVID)/.evidence/template/src/pages/macro/+page.md
+	cp $(EVID)/pages/prices.md   $(EVID)/.evidence/template/src/pages/prices/+page.md
+	cp $(EVID)/pages/universe.md $(EVID)/.evidence/template/src/pages/universe/+page.md
 
 dbt-docs:
 	cd $(QUANT_ROOT)/dbt && $(DBT_BIN) docs generate && $(DBT_BIN) docs serve

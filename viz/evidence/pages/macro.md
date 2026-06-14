@@ -6,13 +6,13 @@ FX·달러인덱스·원자재·지수·크레딧·인플레이션 시계열. `d
 
 ```sql latest
 select
-  d.category, d.series, d.label, d.unit, d.source,
+  d.category, d.label, d.unit, d.source,
   max(f.date)                             as latest_date,
   last(f.value order by f.date)           as latest_value
 from quant.macro f
 join quant.macro_series d on f.sk_dim_macro_series = d.sk_id
 group by all
-order by d.category, d.series
+order by d.category, d.label
 ```
 
 <DataTable data={latest} rows=30/>

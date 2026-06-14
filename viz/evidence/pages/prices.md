@@ -5,19 +5,19 @@ title: 가격
 수정주가 OHLCV. 유니버스·종목을 선택하세요.
 
 ```sql universes
-select distinct u.universe
+select distinct u.universe_name
 from quant.prices p
 join quant.universe u on p.sk_dim_universe_history = u.sk_id
-order by u.universe
+order by u.universe_name
 ```
 
-<Dropdown data={universes} name=univ value=universe label=universe/>
+<Dropdown data={universes} name=univ value=universe_name label=universe_name/>
 
 ```sql symbols
 select u.name
 from quant.prices p
 join quant.universe u on p.sk_dim_universe_history = u.sk_id
-where u.universe = '${inputs.univ.value}'
+where u.universe_name = '${inputs.univ.value}'
 group by u.name
 order by u.name
 ```
@@ -28,7 +28,7 @@ order by u.name
 select p.date, p.open, p.high, p.low, p.close, p.volume, p.is_halted
 from quant.prices p
 join quant.universe u on p.sk_dim_universe_history = u.sk_id
-where u.universe = '${inputs.univ.value}'
+where u.universe_name = '${inputs.univ.value}'
   and u.name = '${inputs.sym.value}'
 order by p.date
 ```
@@ -47,7 +47,7 @@ order by p.date
 select p.date, p.open, p.high, p.low, p.close, p.volume, p.is_halted
 from quant.prices p
 join quant.universe u on p.sk_dim_universe_history = u.sk_id
-where u.universe = '${inputs.univ.value}'
+where u.universe_name = '${inputs.univ.value}'
   and u.name = '${inputs.sym.value}'
 order by p.date desc
 limit 10

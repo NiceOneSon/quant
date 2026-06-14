@@ -30,15 +30,48 @@ cd viz/evidence && npm run sources  # 2) 소스 재빌드
 > Evidence 소스(`npm run sources`)는 캐시 클리어 후 반드시 재실행해야 한다.
 > 누락 시 페이지가 오래된 parquet을 참조하거나 ENOENT 오류가 발생한다.
 
-## 작성 규칙
+## 작성 규칙 — 내부 코드 노출 금지
 
-- **Dropdown `value`는 항상 `label` 또는 `name` 필드를 사용한다. 시리즈 코드·종목 코드를 value나 defaultValue로 쓰지 않는다.**
+UI에서 `series`, `symbol`, `universe` 같은 내부 식별자 코드가 보이면 안 된다.
+**name / label 만 노출한다.** 아래 세 레이어 모두에서 일관되게 적용한다.
+
+### 1. 소스 SQL (`sources/quant/*.sql`)
+
+`select *` 대신 컬럼을 명시해 내부 코드 컬럼을 제외한다.
+
+| 소스 파일 | 제외 컬럼 | 노출 컬럼 |
+|---|---|---|
+| `rate_series.sql` | `series` | `sk_id, label, country, tenor` |
+| `macro_series.sql` | `series` | `sk_id, label, unit, country, category, source, frequency` |
+| `security.sql` | `symbol` | `sk_id, name, market` |
+| `universe.sql` | `universe` (코드) | `sk_id, universe_name, symbol→name, valid_from, valid_to, is_current` |
+
+새 소스 추가 시: `select *` 금지. SK(`sk_id`)와 사람이 읽을 수 있는 컬럼만 노출.
+
+### 2. 페이지 쿼리 (`pages/*.md`)
+
+- SELECT에 코드 컬럼을 포함하지 않는다.
+  - 잘못된 예: `select d.series, d.label, ...`
+  - 올바른 예: `select d.label, d.country, d.tenor, ...`
+- WHERE 필터도 label/name 기준으로 작성한다.
+  - 잘못된 예: `where d.series = 'IR3TIB01KRM156N'`
+  - 올바른 예: `where d.label = '한국 3개월 은행간'`
+- ORDER BY도 마찬가지.
+  - 잘못된 예: `order by d.series`
+  - 올바른 예: `order by d.label`
+
+### 3. 드롭다운 컴포넌트
+
+- `value`는 반드시 `label` 또는 `name` 필드를 사용한다.
   - 잘못된 예: `value=series defaultValue="IR3TIB01KRM156N"`
   - 올바른 예: `value=label label=label`
-- **`defaultValue`는 사용하지 않는다** — Evidence가 데이터 첫 번째 행을 자동 선택한다.
-- **쿼리 필터도 label/name 기준으로 작성한다.** 드롭다운 뿐 아니라 내부 분석 쿼리(스프레드 계산, KPI 등)도 마찬가지다.
-  - 잘못된 예: `where d.series = 'DGS10'`
-  - 올바른 예: `where d.label = '미국채 10년'`
+- `defaultValue`는 사용하지 않는다 — Evidence가 첫 번째 행을 자동 선택한다.
+
+### 새 유니버스/시리즈 추가 시 체크리스트
+
+- [ ] `dim_universe_history.sql` CASE WHEN에 `universe_name` 매핑 추가
+- [ ] `rate_series` / `macro_series` seed에 `label` 컬럼 입력
+- [ ] 소스 SQL의 명시적 컬럼 목록에 새 컬럼이 필요하면 추가 (코드 컬럼은 제외 유지)
 
 ## Docker (프로덕션)
 
