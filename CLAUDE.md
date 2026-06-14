@@ -77,6 +77,25 @@ uv run python scripts/ingest.py --config configs/dev.yaml
 
 작업 완료 시 위 테스트/린트/타입 체크를 **모두 통과**시킨 뒤 마무리하세요.
 
+### dbt 변경 후 필수 후속 작업
+
+dbt 모델·시드·소스를 변경한 뒤에는 **반드시 아래 순서로 실행**한다.
+
+```bash
+# 1) dbt 빌드 (마트 parquet 재생성 + Evidence 캐시 클리어 포함)
+make dbt-build
+
+# 2) DuckDB UI 뷰 갱신 — 테이블 추가·삭제 시에만 (컨테이너 재시작 필요)
+docker compose restart duckdb-ui
+
+# 3) Evidence 소스 재빌드 — 소스 SQL·pages 변경 후 항상 수행
+cd viz/evidence && npm run sources
+```
+
+- `make dbt-build` 는 dbt build + `gen_duckdb_views.py` + Evidence 3개 캐시 클리어를 한 번에 수행한다.
+- Evidence 소스(`npm run sources`)는 캐시 클리어 후 반드시 재실행해야 한다. 누락 시 페이지가 오래된 parquet을 참조하거나 ENOENT 오류가 발생한다.
+- DuckDB UI는 컨테이너 기동 시 `views.yaml`을 한 번만 읽으므로, 마트 테이블이 추가·삭제된 경우에만 재시작하면 된다.
+
 ---
 
 ## 5. 코딩 컨벤션

@@ -12,6 +12,7 @@ select
     unit,
     country,
     category,
-    source
+    source,
+    frequency
 from {{ ref('macro_series') }}
 order by category, series

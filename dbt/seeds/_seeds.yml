@@ -33,6 +33,12 @@ seeds:
           수집 소스. ingest.py 배치 모드에서 이 값을 읽어 FDR/FRED 중 선택.
           - fdr: FinanceDataReader (FX, 지수, ETF, 현물가격)
           - fred: FRED via FDR wrapper (미국 연준·정부 공식 통계)
+      - name: frequency
+        description: >
+          발표 주기. assert_macro_series_freshness 테스트의 freshness 임계값 기준.
+          - daily: 일별 (warn 3일 / error 7일)
+          - weekly: 주별 (warn 10일 / error 14일)
+          - monthly: 월별 (warn 45일 / error 90일)
 
     # 시리즈별 출처 메모 (로우 단위 description은 dbt seed에서 미지원 → 여기서 문서화)
     meta:
@@ -59,7 +65,6 @@ seeds:
         # ── 통화량 / 연준 ─────────────────────────────────────────────────────
         M2SL:       "FRED — 미국 M2 통화량(SA, 십억 달러), 월별"
         WALCL:      "FRED — 연준 대차대조표 총자산(H.4.1), 주별"
-        MYAGM2KRM189N: "FRED — 한국 M2(SA, 십억 원), 월별"
         # ── 원자재 ───────────────────────────────────────────────────────────
         DCOILWTICO: "FRED — WTI 원유 현물가(쿠싱, 오클라호마), 일별"
         DHHNGSP:    "FRED — 천연가스 현물가(헨리허브), 일별"

@@ -41,3 +41,4 @@ seeds:
         country: varchar
         category: varchar
         source: varchar
+        frequency: varchar

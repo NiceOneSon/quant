@@ -117,6 +117,13 @@ models:
       - name: source
         description: "수집 소스(fdr/fred). ingest.py 배치 모드에서 참조."
         data_tests: [not_null]
+      - name: frequency
+        description: "발표 주기(daily/weekly/monthly). assert_macro_series_freshness 테스트 기준."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["daily", "weekly", "monthly"]
 
   # ─────────────────────────────
   # Fact tables

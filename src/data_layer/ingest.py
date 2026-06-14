@@ -194,8 +194,8 @@ def ingest_rates(
 
 
 def macro_path(series: str, data_dir: Path | None = None) -> Path:
-    """`series` 매크로 데이터의 parquet 경로 (슬래시 → 언더스코어)."""
-    safe = series.replace("/", "_")
+    """`series` 매크로 데이터의 parquet 경로 (슬래시·콜론 → 언더스코어)."""
+    safe = series.replace("/", "_").replace(":", "_")
     return (data_dir or DEFAULT_DATA_DIR) / "reference" / "macro" / f"{safe}.parquet"
 
 
