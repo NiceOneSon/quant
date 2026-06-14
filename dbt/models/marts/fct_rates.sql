@@ -3,13 +3,4 @@
     location=(env_var('QUANT_MARTS_DIR', '../data/marts') ~ '/fct_rates.parquet')
 ) }}
 
--- 금리 시리즈 + seed(rate_series)에서 라벨·만기 보강.
-select
-    r.date,
-    r.series,
-    r.country,
-    m.label,
-    m.tenor,
-    r.rate
-from {{ ref('stg_rates') }} as r
-left join {{ ref('rate_series') }} as m on r.series = m.series
+select * from {{ ref('int_rates_enriched') }}

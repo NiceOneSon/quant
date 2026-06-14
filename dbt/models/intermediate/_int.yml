@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: int_universe_membership
+    description: "유니버스 멤버십 구간(+ is_current). dim_universe 의 소스."
+  - name: int_rates_enriched
+    description: "금리 시리즈에 seed(rate_series) 라벨·만기를 조인. fct_rates 의 소스."
+  - name: int_prices_pit
+    description: >
+      가격 × 유니버스 멤버십 as-of 조인. is_member_asof 로 그 시점 편입 여부 플래그.
+      fct_prices 의 소스. (ephemeral — 마트에 인라인)

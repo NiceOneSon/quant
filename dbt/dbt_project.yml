@@ -14,8 +14,12 @@ clean-targets: ["target", "dbt_packages", "logs"]
 
 models:
   quant_dbt:
+    # 레이어: raw(소스 parquet) → staging(view) → intermediate(ephemeral) → marts(external parquet)
     staging:
       +materialized: view
+    intermediate:
+      # 조인·PIT 로직. 직접 노출 안 함 → ephemeral 로 마트에 인라인.
+      +materialized: ephemeral
     marts:
       # 마트는 external parquet 로 출력 → 백테스트(polars)·Evidence 가 파일로 소비.
       # 출력 위치는 각 모델 config(location) 에서 QUANT_MARTS_DIR 로 지정.

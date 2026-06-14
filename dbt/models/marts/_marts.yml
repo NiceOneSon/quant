@@ -28,6 +28,8 @@ models:
         description: "거래량."
       - name: is_halted
         description: "거래정지/무거래(거래량 0). 백테스트는 이 날 체결 불가로 본다."
+      - name: is_member_asof
+        description: "그 거래일에 해당 유니버스 멤버였는지(point-in-time). 생존편향 검증·필터용."
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -47,6 +49,8 @@ models:
         data_tests: [not_null]
       - name: removed
         description: "편출일. null 이면 편입 유지. 상장폐지·편출 이력을 보존."
+      - name: is_current
+        description: "현재 편입 유지 여부(removed is null)."
 
   - name: fct_rates
     description: "금리 시리즈(무위험·국채). country 로 KR/US 구분, series 로 시리즈 식별."
