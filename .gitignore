@@ -2,3 +2,7 @@
 **/__pycache__/
 
 *.parquet
+
+# direnv — 로컬 경로가 하드코딩되므로 커밋 제외. .envrc.example 을 대신 커밋.
+.envrc
+.direnv/

@@ -1,0 +1,19 @@
+# direnv 환경설정 템플릿.
+# 사용법:
+#   cp .envrc.example .envrc
+#   direnv allow
+#
+# 이후 `dbt build`, `dbt test` 등을 프로젝트 루트에서 바로 실행 가능.
+
+export QUANT_ROOT="$(pwd)"
+export QUANT_DATA_DIR="$QUANT_ROOT/data"
+export QUANT_MARTS_DIR="$QUANT_DATA_DIR/marts"
+
+# dbt: profiles.yml 위치 — dbt 가 이 env var 을 네이티브로 읽는다.
+export DBT_PROFILES_DIR="$QUANT_ROOT/dbt"
+
+# dbt: DuckDB 파일 (개발용)
+export DBT_DUCKDB_PATH="$QUANT_ROOT/dbt/target/quant.duckdb"
+
+# dbt CLI — 프로젝트 루트에서 `dbt` 명령어로 직접 실행 가능.
+PATH_add "$QUANT_ROOT/dbt/.venv/bin"

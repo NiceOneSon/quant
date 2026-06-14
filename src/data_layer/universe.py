@@ -18,7 +18,9 @@ import polars as pl
 
 # 저장소 규약: point-in-time 멤버십은 reference 데이터로 parquet 에 보관한다.
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_DATA_DIR = REPO_ROOT / "data"
+# QUANT_DATA_DIR env var (direnv) 우선 — 없으면 레포 기준 상대 경로.
+_env_data = os.environ.get("QUANT_DATA_DIR")
+DEFAULT_DATA_DIR = Path(_env_data) if _env_data else REPO_ROOT / "data"
 
 
 def default_marts_dir() -> Path:

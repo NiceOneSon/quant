@@ -38,7 +38,8 @@ order by f.date
 ```sql dxy
 select f.date, f.value
 from quant.macro f
-where f.series = 'DTWEXBGS'
+join quant.macro_series d on f.sk_dim_macro_series = d.sk_id
+where d.series = 'DTWEXBGS'
 order by f.date
 ```
 
@@ -86,7 +87,7 @@ select series, label, unit, category from quant.macro_series order by category, 
 select f.date, f.value, d.label, d.unit
 from quant.macro f
 join quant.macro_series d on f.sk_dim_macro_series = d.sk_id
-where f.series = '${inputs.sel.value}'
+where d.series = '${inputs.sel.value}'
 order by f.date
 ```
 

@@ -21,8 +21,10 @@ order by f.date
 ```sql spread
 select a.date, a.rate - b.rate as spread_10y_2y
 from quant.rates a
-join quant.rates b on a.date = b.date
-where a.series = 'DGS10' and b.series = 'DGS2'
+join quant.rate_series da on a.sk_dim_rate_series = da.sk_id
+join quant.rates b      on a.date = b.date
+join quant.rate_series db on b.sk_dim_rate_series = db.sk_id
+where da.series = 'DGS10' and db.series = 'DGS2'
 order by a.date
 ```
 
@@ -42,7 +44,7 @@ order by d.country, d.tenor
 select f.date, d.label, d.country, d.tenor, f.rate
 from quant.rates f
 join quant.rate_series d on f.sk_dim_rate_series = d.sk_id
-where f.series = '${inputs.sel.value}'
+where d.series = '${inputs.sel.value}'
 order by f.date
 ```
 
