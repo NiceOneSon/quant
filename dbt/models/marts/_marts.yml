@@ -321,7 +321,7 @@ models:
       - name: score_mom
         description: "모멘텀 패밀리 score: (mom_12_1m + mom_6m + rev_1w + hi52w_ratio rank) / 4."
       - name: score_lowvol
-        description: "저변동성 패밀리 score: (vol_1m + beta_1y + idio_vol rank) / 3."
+        description: "저변동성 패밀리 score: (vol_1m + idio_vol rank) / 2. beta_1y 는 모멘텀과 역상관(-0.88)으로 composite 상쇄 방지를 위해 제외, beta_1y_rank 는 참조용으로만 보존."
       - name: score_liq
         description: "유동성 패밀리 score: (adv_20d + vol_surge rank) / 2."
       - name: score_composite

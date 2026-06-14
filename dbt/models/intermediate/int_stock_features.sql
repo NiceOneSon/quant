@@ -26,8 +26,8 @@ windowed as (
         -- 변동성
         stddev_pop(ret_1d) over w21  as vol_1m,
         stddev_pop(ret_1d) over w63  as vol_3m,
-        -- 베타 (OLS slope: cov(ret, kospi) / var(kospi))
-        regr_slope(ret_1d, kospi_ret_1d) over w252 as beta_1y,
+        -- 베타 (OLS slope). regr_slope 는 시장 분산 부족 시 NaN 반환 → null 로 변환
+        regr_slope(ret_1d, kospi_ret_1d) over w252 as beta_1y_raw,
         -- idio vol 계산용 분산
         var_pop(ret_1d)          over w21 as var_ret_21d,
         var_pop(kospi_ret_1d)    over w21 as var_kospi_21d,
@@ -56,9 +56,12 @@ select
     -- ── Low-vol / Risk ────────────────────────────────────────
     vol_1m,
     vol_3m,
-    beta_1y,
-    -- 특이변동성: sqrt(총분산 - β²·시장분산), 음수 방지
-    sqrt(greatest(var_ret_21d - beta_1y * beta_1y * var_kospi_21d, 0)) as idio_vol_1m,
+    -- NaN → null 변환 (regr_slope 반환 NaN은 집계함수에서 전파되어 rank 오염)
+    case when isnan(beta_1y_raw) then null else beta_1y_raw end as beta_1y,
+    -- idio_vol: beta NaN이면 null 처리
+    case when isnan(beta_1y_raw) then null
+         else sqrt(greatest(var_ret_21d - beta_1y_raw * beta_1y_raw * var_kospi_21d, 0))
+    end as idio_vol_1m,
     -- ── Liquidity ─────────────────────────────────────────────
     adv_20d,
     adv_5d / nullif(adv_20d, 0) as vol_surge  -- 거래대금 급등 (5d/20d)
