@@ -75,6 +75,9 @@ models:
               arguments:
                 to: ref('dim_security')
                 field: symbol
+      - name: name
+        description: "종목명. dim_security.name 조인값 (예: 005930 → 삼성전자)."
+        data_tests: [not_null]
       - name: valid_from
         description: "구간 시작일(포함). 갭 구간은 sentinel 1900-01-01."
         data_tests: [not_null]
@@ -148,14 +151,13 @@ models:
       - name: sk_dim_universe_history
         description: >
           dim_universe_history.sk_id 참조 = hash(universe, symbol, valid_from).
-          범위 조인(valid_from ≤ date < valid_to)으로 항상 non-null.
-          is_member=false 구간은 갭 행(편입 전·재편입 공백)을 의미.
+          편입 전 가격 행은 null (pre-membership 가격은 dim에 구간 없음).
         data_tests:
-          - not_null
           - relationships:
               arguments:
                 to: ref('dim_universe_history')
                 field: sk_id
+                where: sk_dim_universe_history is not null
       - name: date
         description: "거래일."
         data_tests: [not_null]

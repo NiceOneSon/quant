@@ -30,7 +30,7 @@ select
     base.is_halted,
     base.is_member_asof
 from base
-join universe_hist uh
+left join universe_hist uh
     on  base.universe = uh.universe
     and base.symbol   = uh.symbol
     and base.date     >= uh.valid_from

@@ -15,14 +15,27 @@ with base as (
         is_member,
         cast(valid_from as varchar) as _valid_from_str
     from {{ ref('int_universe_history') }}
+),
+with_sk as (
+    select
+        {{ dbt_utils.generate_surrogate_key(['universe', 'symbol', '_valid_from_str']) }} as sk_id,
+        universe,
+        symbol,
+        valid_from,
+        valid_to,
+        is_member,
+        (is_member and valid_to is null) as is_current
+    from base
 )
 select
-    {{ dbt_utils.generate_surrogate_key(['universe', 'symbol', '_valid_from_str']) }} as sk_id,
-    universe,
-    symbol,
-    valid_from,
-    valid_to,
-    is_member,
-    (is_member and valid_to is null) as is_current
-from base
-order by universe, symbol, valid_from
+    w.sk_id,
+    w.universe,
+    w.symbol,
+    s.name,
+    w.valid_from,
+    w.valid_to,
+    w.is_member,
+    w.is_current
+from with_sk w
+left join {{ ref('dim_security') }} s on w.symbol = s.symbol
+order by w.universe, w.symbol, w.valid_from
