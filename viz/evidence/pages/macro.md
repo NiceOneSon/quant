@@ -145,17 +145,31 @@ order by f.date
 
 ---
 
-## 통화량 · 연준 대차대조표
+## 통화량 · 연준 대차대조표 (미국)
 
 ```sql monetary
 select f.date, d.label, d.unit, f.value
 from quant.macro f
 join quant.macro_series d on f.sk_dim_macro_series = d.sk_id
-where d.label in ('미국 M2', '연준 대차대조표', '한국 M2')
+where d.label in ('미국 M2', '연준 대차대조표')
 order by f.date
 ```
 
-<LineChart data={monetary} x=date y=value series=label title="통화량 · 연준 대차대조표"/>
+<LineChart data={monetary} x=date y=value series=label title="미국 통화량 · 연준 대차대조표"/>
+
+---
+
+## 한국 M2 (광의통화)
+
+```sql kr_m2
+select f.date, f.value
+from quant.macro f
+join quant.macro_series d on f.sk_dim_macro_series = d.sk_id
+where d.label = '한국 M2 (광의통화 평잔)'
+order by f.date
+```
+
+<LineChart data={kr_m2} x=date y=value title="한국 M2 (광의통화 평잔)" yAxisTitle="십억원" colorPalette={["#e85d04"]}/>
 
 ---
 

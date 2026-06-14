@@ -20,8 +20,6 @@ select
     {{ dbt_utils.generate_surrogate_key(['base.date', 'base.universe', 'base.symbol']) }} as sk_id,
     {{ dbt_utils.generate_surrogate_key(['base.symbol'])                               }} as sk_dim_security,
     uh.sk_id                                                                               as sk_dim_universe_history,
-    base.universe,
-    base.symbol,
     base.date,
     base.open,
     base.high,
@@ -37,4 +35,4 @@ join universe_hist uh
     and base.symbol   = uh.symbol
     and base.date     >= uh.valid_from
     and (uh.valid_to is null or base.date < uh.valid_to)
-order by base.universe, base.symbol, base.date
+order by sk_dim_security, sk_dim_universe_history, date

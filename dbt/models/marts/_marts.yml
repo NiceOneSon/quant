@@ -156,12 +156,6 @@ models:
               arguments:
                 to: ref('dim_universe_history')
                 field: sk_id
-      - name: universe
-        description: "유니버스 식별자. 자연 키(필터용)."
-        data_tests: [not_null]
-      - name: symbol
-        description: "KRX 6자리 상장코드. 자연 키(필터용)."
-        data_tests: [not_null]
       - name: date
         description: "거래일."
         data_tests: [not_null]
