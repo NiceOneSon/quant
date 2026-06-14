@@ -5,9 +5,7 @@
 
 -- SCD2 유니버스 히스토리 차원.
 -- 멤버십 구간(is_member=true)과 갭 구간(is_member=false)으로 전체 날짜 범위를 빈틈없이 커버.
--- fct_prices.sk_dim_universe_history 가 이 테이블을 범위 조인(valid_from ≤ date < valid_to)으로 참조.
--- dim_universe: 실제 편입 구간 전용 (기존 유지).
--- dim_universe_history: 전체 타임라인 커버 — null FK 제거를 위한 SCD2 확장.
+-- fct_prices.sk_dim_universe_history 가 범위 조인(valid_from ≤ date < valid_to)으로 참조 — null FK 없음.
 with base as (
     select
         universe,

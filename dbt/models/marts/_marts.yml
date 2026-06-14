@@ -29,33 +29,6 @@ models:
               arguments:
                 values: ["KOSPI", "KOSDAQ", "KONEX", "KOSPI MARKET", "KOSDAQ MARKET", "KOSDAQ GLOBAL"]
 
-  - name: dim_universe
-    description: >
-      PIT 유니버스 멤버십 구간. sk_id = hash(universe, symbol, added).
-      [added, removed) 반개구간으로 생존편향을 방지한다.
-    columns:
-      - name: sk_id
-        description: "서로게이트 키 = hash(universe, symbol, added). 각 편입 구간을 고유 식별."
-        data_tests: [not_null, unique]
-      - name: universe
-        description: "유니버스 식별자."
-        data_tests: [not_null]
-      - name: symbol
-        description: "KRX 6자리 상장코드. dim_security 에서 조인해 종목명을 얻는다."
-        data_tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('dim_security')
-                field: symbol
-      - name: added
-        description: "편입일(구간 시작)."
-        data_tests: [not_null]
-      - name: removed
-        description: "편출일. null 이면 현재까지 편입 유지."
-      - name: is_current
-        description: "현재 편입 유지 여부(removed is null)."
-
   - name: dim_rate_series
     description: "금리 시리즈 마스터. sk_id = hash(series). fct_rates.sk_dim_rate_series 가 참조."
     columns:
