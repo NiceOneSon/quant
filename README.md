@@ -130,7 +130,7 @@ Evidence 페이지:
 - **금리** `/rates` — 무위험금리·국채 수익률 곡선·장단기 스프레드
 - **매크로** `/macro` — FX·달러인덱스·VIX·원자재·크레딧·인플레이션·고용·통화량·수출입
 
-Evidence 저작 (핫리로드):
+Evidence 저작(핫리로드):
 ```bash
 cd viz/evidence && npm install && npm run dev
 ```
