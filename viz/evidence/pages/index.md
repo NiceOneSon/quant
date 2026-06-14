@@ -54,6 +54,7 @@ limit 1
 ## 페이지
 
 - [가격](/prices) — 종목별 OHLCV·거래량·거래정지
+- [팩터](/factors) — 종목 단면 팩터 스코어·랭킹 (Momentum / Low-vol / Liquidity)
 - [유니버스](/universe) — 구성 종목·소스별 규모
 - [금리](/rates) — 무위험금리·국채 수익률 곡선
 - [매크로](/macro) — FX·달러인덱스·원자재·지수·크레딧·인플레이션

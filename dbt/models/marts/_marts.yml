@@ -253,14 +253,23 @@ models:
       - name: sk_id
         description: "서로게이트 키 = hash(date, symbol, universe)."
         data_tests: [not_null, unique]
+      - name: sk_dim_security
+        description: "dim_security.sk_id 참조 = hash(symbol)."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_security')
+                field: sk_id
+      - name: sk_dim_universe_history
+        description: "dim_universe_history.sk_id 참조. AS-OF 조인으로 해당 날짜의 멤버십 구간 매핑."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_universe_history')
+                field: sk_id
       - name: date
-        data_tests: [not_null]
-      - name: symbol
-        data_tests: [not_null]
-      - name: name
-        description: "종목명. dim_security 조인."
-        data_tests: [not_null]
-      - name: universe
         data_tests: [not_null]
       - name: score_composite
         description: "family score 단순평균. 높을수록 복합 팩터 우위."

@@ -35,6 +35,8 @@ evidence-sync-pages:
 	cp $(EVID)/pages/macro.md    $(EVID)/.evidence/template/src/pages/macro/+page.md
 	cp $(EVID)/pages/prices.md   $(EVID)/.evidence/template/src/pages/prices/+page.md
 	cp $(EVID)/pages/universe.md $(EVID)/.evidence/template/src/pages/universe/+page.md
+	mkdir -p $(EVID)/.evidence/template/src/pages/factors
+	cp $(EVID)/pages/factors.md  $(EVID)/.evidence/template/src/pages/factors/+page.md
 
 dbt-docs:
 	cd $(QUANT_ROOT)/dbt && $(DBT_BIN) docs generate && $(DBT_BIN) docs serve

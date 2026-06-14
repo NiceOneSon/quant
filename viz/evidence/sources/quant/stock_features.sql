@@ -1,11 +1,15 @@
--- fct_stock_features: 종목 단면 팩터. name 기준 노출 (symbol 코드 제외).
+-- fct_stock_features: 종목 단면 팩터.
+-- dim_universe_history 조인으로 name·universe_name 보강 (dim_security 불필요).
 select
-    date, name, universe,
-    mom_1m, mom_6m, mom_12_1m, rev_1w, hi52w_ratio,
-    vol_1m, vol_3m, beta_1y, idio_vol_1m,
-    adv_20d, vol_surge,
-    mom_12_1m_rank, mom_6m_rank, mom_1m_rank, rev_1w_rank, hi52w_ratio_rank,
-    vol_1m_rank, vol_3m_rank, beta_1y_rank, idio_vol_rank,
-    adv_20d_rank, vol_surge_rank,
-    score_mom, score_lowvol, score_liq, score_composite
-from read_parquet('../../data/marts/fct_stock_features.parquet')
+    f.date,
+    u.name,
+    u.universe_name,
+    f.mom_1m, f.mom_6m, f.mom_12_1m, f.rev_1w, f.hi52w_ratio,
+    f.vol_1m, f.vol_3m, f.beta_1y, f.idio_vol_1m,
+    f.adv_20d, f.vol_surge,
+    f.mom_12_1m_rank, f.mom_6m_rank, f.mom_1m_rank, f.rev_1w_rank, f.hi52w_ratio_rank,
+    f.vol_1m_rank, f.vol_3m_rank, f.beta_1y_rank, f.idio_vol_rank,
+    f.adv_20d_rank, f.vol_surge_rank,
+    f.score_mom, f.score_lowvol, f.score_liq, f.score_composite
+from read_parquet('../../data/marts/fct_stock_features.parquet') f
+join read_parquet('../../data/marts/dim_universe_history.parquet') u on f.sk_dim_universe_history = u.sk_id
