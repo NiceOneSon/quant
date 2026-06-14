@@ -18,7 +18,8 @@
       "Bash(/usr/bin/curl -sS -o /dev/null -w \"/prices   -> HTTP %{http_code}\\\\n\" http://localhost:3000/prices)",
       "Bash(/usr/bin/curl -sS -o /dev/null -w \"/universe -> HTTP %{http_code}\\\\n\" http://localhost:3000/universe)",
       "Bash(/usr/bin/curl -sS -o /dev/null -w \"/rates    -> HTTP %{http_code}\\\\n\" http://localhost:3000/rates)",
-      "Bash(/usr/bin/curl -sSL -o /dev/null -w \"/prices \\(follow\\) -> HTTP %{http_code}, %{size_download} bytes\\\\n\" http://localhost:3000/prices)"
+      "Bash(/usr/bin/curl -sSL -o /dev/null -w \"/prices \\(follow\\) -> HTTP %{http_code}, %{size_download} bytes\\\\n\" http://localhost:3000/prices)",
+      "Bash(echo \"sources exit: $?\")"
     ]
   }
 }
