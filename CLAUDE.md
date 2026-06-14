@@ -106,8 +106,25 @@ cd viz/evidence && npm run sources
 - 로깅은 `common.logging` 의 구조화 로거를 쓴다. `print()` 사용 금지.
 - 매직 넘버 금지 — 의미 있는 상수/설정으로.
 
-**dbt Mart 레이어 규칙**
-- 모든 mart 테이블(dim·fct)은 자체 `sk_id = {{ dbt_utils.generate_surrogate_key([...]) }}` 를 **첫 번째 컬럼**으로 갖는다.
+**dbt 레이어 규칙**
+
+레이어 흐름: `raw → staging → intermediate → mart` (단방향, 역방향 ref 금지)
+
+| 레이어 | 책임 | 하지 않는 것 |
+|---|---|---|
+| raw | `source()` 선언만. 가공 없음 | 변환 일체 |
+| staging | 컬럼명 표준화·타입 캐스팅·단순 변환 (소스 1:1) | 조인, 집계 |
+| intermediate | 조인·집계 등 복잡한 중간 계산. mart에만 노출, BI 직접 노출 금지 | 최종 산출물 |
+| mart | 분석가·BI가 직접 쓰는 결과물. dim + fct 스타스키마 | — |
+
+**어느 레이어에 넣을지 판단 기준**
+- 컬럼명/타입만 정리 → staging
+- 조인·집계가 들어가지만 최종 산출물 아님 → intermediate
+- 분석가가 바로 쿼리할 결과물 → mart
+- 가공 없이 원본 참조만 → source (raw)
+
+**mart SK/FK 규칙**
+- 모든 mart 테이블(dim·fct)은 `sk_id = {{ dbt_utils.generate_surrogate_key([...]) }}` 를 **첫 번째 컬럼**으로 갖는다.
   - dim: `sk_id = hash(자연 키)`. ex) `dim_security.sk_id = hash(symbol)`
   - fct: `sk_id = hash(그레인 컬럼들)`. ex) `fct_prices.sk_id = hash(date, universe, symbol)`
 - fct 의 dim 참조 FK 는 `sk_dim_<테이블명>` 으로 명명한다. ex) `sk_dim_security`, `sk_dim_rate_series`

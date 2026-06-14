@@ -130,6 +130,14 @@ uv run python scripts/ingest.py --config configs/backtest.yaml --dataset macro
 
 > FRED 발표 lag 최대 3개월 이상 — freshness error 임계값 120일 적용
 
+### 한국 통화량
+
+| series | label | 단위 | 주기 | 소스 |
+|---|---|---|---|---|
+| 161Y006:BBHA00:M | 한국 M2 (광의통화 평잔) | 십억원 | monthly | ECOS |
+
+> ECOS API KEY 등록됨 (`ECOS_KEY` env). Rate limit 300req/3min → throttle 1.1s 적용.
+
 ---
 
 ## 미수집 지표 (우선순위 순)
@@ -140,7 +148,7 @@ uv run python scripts/ingest.py --config configs/backtest.yaml --dataset macro
 | 프로그램매매 (차익/비차익) | KRX 차단 | KIS REST 시세분석 계열 |
 | VKOSPI | KRX 차단 | 네이버 보조 스크래핑 (best-effort) |
 | ADR (등락비율) | KRX 차단 | fct_prices 기반 자체 계산 |
-| 국내 크레딧 스프레드 | ECOS 키 미등록 | ecos.bok.or.kr 무료 키 발급 |
+| 국내 크레딧 스프레드 | ECOS 시리즈 미수집 | `macro_series.csv`에 ECOS 시리즈 코드 추가 |
 | 관세청 품목별 수출입 | API 키 미등록 | 관세청 Open API 무료 발급 |
 
 ---
