@@ -16,8 +16,6 @@ models:
         data_tests:
           - not_null
           - unique
-          - dbt_utils.expression_is_true:
-              expression: "length(symbol) = 6"
       - name: name
         description: "종목명(예: 005930 → 삼성전자)."
         data_tests: [not_null]
@@ -27,6 +25,10 @@ models:
           - accepted_values:
               arguments:
                 values: ["KOSPI", "KOSDAQ", "KONEX", "KOSPI MARKET", "KOSDAQ MARKET", "KOSDAQ GLOBAL"]
+    data_tests:
+      # length() 함수가 포함되어 column-level expression_is_true 사용 불가 → table-level 로.
+      - dbt_utils.expression_is_true:
+          expression: "length(symbol) = 6"
 
   - name: dim_universe
     description: >
@@ -148,35 +150,36 @@ models:
         description: "거래일."
         data_tests: [not_null]
       - name: close
-        description: "수정주가 종가(KRW)."
+        description: "수정주가 종가(KRW). 항상 양수."
         data_tests:
           - not_null
+          # column-level expression_is_true: column_name 이 자동 prepend → expression 에 column명 제외.
           - dbt_utils.expression_is_true:
-              expression: "close > 0"
+              expression: "> 0"
       - name: open
         data_tests:
           # 거래정지일(is_halted=true)은 open/high/low=0이 정상 (마지막 기준가 이월).
           - dbt_utils.expression_is_true:
-              expression: "open > 0 or is_halted"
+              expression: "> 0 or is_halted"
       - name: high
         data_tests:
           - dbt_utils.expression_is_true:
-              expression: "high > 0 or is_halted"
+              expression: "> 0 or is_halted"
       - name: low
         data_tests:
           - dbt_utils.expression_is_true:
-              expression: "low > 0 or is_halted"
+              expression: "> 0 or is_halted"
       - name: volume
         data_tests:
           - dbt_utils.expression_is_true:
-              expression: "volume >= 0"
+              expression: ">= 0"
       - name: close_raw
         description: "원본(미수정) 종가. 벤더 미제공 시 null."
       - name: is_halted
         description: "거래정지/무거래(volume=0). dbt ELT 파생값."
         data_tests:
           - dbt_utils.expression_is_true:
-              expression: "is_halted = (volume = 0)"
+              expression: "= (volume = 0)"
       - name: is_member_asof
         description: "그 거래일에 해당 유니버스 멤버였는지(PIT). 생존편향 검증용."
     data_tests:
@@ -210,8 +213,9 @@ models:
         description: "연율 퍼센트(예: 3.65 = 3.65%)."
         data_tests:
           - not_null
+          # column-level: "rate" 이 prepend → ">= -5 and rate <= 30" 으로 작성.
           - dbt_utils.expression_is_true:
-              expression: "rate >= -5 and rate <= 30"
+              expression: ">= -5 and rate <= 30"
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -240,7 +244,7 @@ models:
         data_tests:
           - not_null
           - dbt_utils.expression_is_true:
-              expression: "value > 0"
+              expression: "> 0"
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
