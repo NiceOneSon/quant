@@ -30,3 +30,4 @@ select rate from quant.rates order by date desc limit 1
 - [가격](/prices) — 종목별 OHLCV·거래량
 - [유니버스](/universe) — 구성 종목·소스별 규모
 - [금리](/rates) — 무위험금리 추이
+- [매크로](/macro) — FX·달러인덱스·원자재·지수

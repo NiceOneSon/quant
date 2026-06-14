@@ -121,20 +121,19 @@ def _fdr_series(series: str, start: date, end: date) -> pl.DataFrame:
     """FDR 로 FX·지수 시계열을 조회해 date/value 프레임으로 반환한다 (네트워크 격리).
 
     예) 'USD/KRW', 'KS11', 'KS200', 'KQ11'
+    pl.from_pandas(pyarrow 필요) 대신 리스트 직접 구성 — FX nullable Int64 대응.
     """
     import FinanceDataReader as fdr  # 지연 import: 선택 의존성('data' extra)
 
     pdf = fdr.DataReader(series, start.isoformat(), end.isoformat())
     if pdf.empty:
         return pl.DataFrame(schema={"date": pl.Date(), "value": pl.Float64()})
-    frame = pl.from_pandas(pdf.reset_index())
-    date_col = frame.columns[0]
-    # FDR 지수/FX 는 'Close' 또는 시리즈명으로 값 컬럼이 온다 → 날짜 외 첫 번째 컬럼 사용.
-    value_col = next(c for c in frame.columns if c != date_col)
-    return (
-        frame.rename({date_col: "date", value_col: "value"})
-        .with_columns(pl.col("date").cast(pl.Date), pl.col("value").cast(pl.Float64))
-        .select(["date", "value"])
+    # 인덱스(날짜) → date 리스트, 값 컬럼(Close 등) → float 리스트로 직접 변환.
+    dates = [d.date() if hasattr(d, "date") else d for d in pdf.index.tolist()]
+    values = [float(v) if v is not None else float("nan") for v in pdf.iloc[:, 0].tolist()]
+    return pl.DataFrame({"date": dates, "value": values}).with_columns(
+        pl.col("date").cast(pl.Date),
+        pl.col("value").cast(pl.Float64),
     )
 
 
