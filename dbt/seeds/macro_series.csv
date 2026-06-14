@@ -26,4 +26,4 @@ KS200,KOSPI200 지수,point,KR,index,fdr,daily
 KQ11,KOSDAQ 지수,point,KR,index,fdr,daily
 XTEXVA01KRM659S,한국 수출 증감률 YoY,%,KR,trade,fred,monthly
 XTIMVA01KRM659S,한국 수입 증감률 YoY,%,KR,trade,fred,monthly
-151Y002:BBMA00:MM,한국 M2 (광의통화 평잔),조원,KR,macro,ecos,monthly
+161Y006:BBHA00:M,한국 M2 (광의통화 평잔),십억원,KR,macro,ecos,monthly

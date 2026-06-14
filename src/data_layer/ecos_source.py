@@ -33,15 +33,15 @@ def _ecos_key() -> str:
 
 
 def _format_period(d: date, cycle: str) -> str:
-    """날짜 → ECOS period 문자열 (MM: YYYYMM, DD: YYYYMMDD)."""
-    if cycle == "MM":
+    """날짜 → ECOS period 문자열 (M: YYYYMM, D: YYYYMMDD)."""
+    if cycle in ("M", "Q", "A"):
         return d.strftime("%Y%m")
     return d.strftime("%Y%m%d")
 
 
 def _parse_period(time_str: str, cycle: str) -> date:
     """ECOS TIME 문자열 → date (월별: 1일, 일별: 당일)."""
-    if cycle == "MM":
+    if len(time_str) == 6:
         return date(int(time_str[:4]), int(time_str[4:6]), 1)
     return date(int(time_str[:4]), int(time_str[4:6]), int(time_str[6:8]))
 
