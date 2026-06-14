@@ -1,0 +1,33 @@
+# DuckDB UI — data/ 의 parquet 을 브라우저에서 SQL/차트로 탐색.
+#   docker compose up --build   → http://localhost:4213
+# data/ 는 읽기전용 마운트(시각화 전용). UI 노트북 상태는 named volume 에 영속.
+# 참고: UI 프런트엔드는 ui.duckdb.org 에서 로드됨(데이터는 로컬, 앱 셸은 원격). 인터넷 필요.
+services:
+  duckdb-ui:
+    build: ./docker/duckdb-ui
+    container_name: quant-duckdb-ui
+    ports:
+      - "4213:4214" # host 4213 → container 4214(socat) → 127.0.0.1:4213(duckdb UI)
+    volumes:
+      - ./data:/data:ro
+      - duckdb-ui-state:/work
+    environment:
+      - DATA_DIR=/data
+      - UI_PORT=4213
+      - DUCKDB_DB=/work/quant.duckdb
+    restart: unless-stopped
+
+  # Evidence.dev — 코드형 BI 대시보드(마크다운+SQL→차트). data/ 를 DuckDB 로 읽음.
+  #   docker compose up -d --build evidence   → http://localhost:3000
+  evidence:
+    build:
+      context: ./viz/evidence
+    container_name: quant-evidence
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data:ro # 소스 SQL 의 ../../data 가 여기로 해석됨
+    restart: unless-stopped
+
+volumes:
+  duckdb-ui-state:

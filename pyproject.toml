@@ -1,0 +1,64 @@
+[project]
+name = "quant"
+version = "0.1.0"
+description = "Modular quant investment system"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.0",
+    "polars>=1.0",
+    "pandas>=2.2",
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "mypy>=1.10",
+]
+# 벤더 데이터 소스 — 수집 시에만 필요. 코어/테스트는 의존하지 않음(지연 import).
+data = [
+    "pykrx>=1.0",
+    # pykrx 가 pkg_resources 를 import 함 → setuptools 필요. 단 81+ 에서 pkg_resources
+    # 가 제거됐으므로 그 이전으로 핀한다.
+    "setuptools>=69,<81",
+    # 수정주가 OHLCV 대안 소스. pykrx 와 독립적인 폴백.
+    "finance-datareader>=0.9",
+]
+# 시각화/탐색 — parquet 을 DuckDB 로 쿼리. UI 확장(>=1.2.1)으로 로컬 웹 UI 제공.
+viz = [
+    "duckdb>=1.2.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src/common",
+    "src/data_layer",
+    "src/research",
+    "src/portfolio",
+    "src/execution",
+    "src/risk",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["src"]
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

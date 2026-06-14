@@ -1,0 +1,71 @@
+"""무위험금리(risk-free rate) 저장·조회. Sharpe·초과수익 계산의 기준값.
+
+저장 포맷: date, rate(연율 %). 소스에 따라 빈도가 다를 수 있다(예: FRED 한국 3개월
+은행간 금리는 월별). 백테스트는 필요 시 영업일로 forward-fill 하고 일율로 환산해 쓴다.
+
+수집(ingest)은 data_layer.ingest 로 격리한다. 여기는 스키마·경로·조회만 담당한다.
+"""
+
+from __future__ import annotations
+
+from datetime import date
+from pathlib import Path
+
+import polars as pl
+
+from data_layer.universe import DEFAULT_DATA_DIR
+
+# 저장 스키마. rate 는 연율 퍼센트(예: 3.65 = 3.65%).
+# series = 시리즈 식별 키(FRED 코드), country = 국가 구분(KR/US/...). 여러 시리즈를
+# 한 테이블로 합쳐도 self-describing 하게 구분된다.
+RATE_SCHEMA: dict[str, pl.DataType] = {
+    "date": pl.Date(),
+    "series": pl.String(),
+    "country": pl.String(),
+    "rate": pl.Float64(),
+}
+
+# 금리 시리즈 메타 — (국가, 라벨). 새 시리즈는 여기 등록한다(미등록 시 country='NA').
+RATE_SERIES: dict[str, tuple[str, str]] = {
+    "IR3TIB01KRM156N": ("KR", "한국 3개월 은행간"),
+    "DGS3MO": ("US", "미국채 3개월"),
+    "DGS2": ("US", "미국채 2년"),
+    "DGS10": ("US", "미국채 10년"),
+    "DFF": ("US", "미 연방기금금리"),
+}
+
+
+def series_country(series: str) -> str:
+    """시리즈 코드의 국가 구분을 반환한다(미등록은 'NA')."""
+    return RATE_SERIES.get(series, ("NA", series))[0]
+
+
+def _parse(d: str | date) -> date:
+    return d if isinstance(d, date) else date.fromisoformat(d)
+
+
+def rates_path(series: str, data_dir: Path | None = None) -> Path:
+    """`series` 금리 데이터의 parquet 경로를 반환한다."""
+    return (data_dir or DEFAULT_DATA_DIR) / "reference" / "rates" / f"{series}.parquet"
+
+
+def load_rates(
+    series: str,
+    start: str | date | None = None,
+    end: str | date | None = None,
+    *,
+    data_dir: Path | None = None,
+) -> pl.DataFrame:
+    """저장된 `series` 무위험금리를 조회한다 (date, rate[연율 %]).
+
+    파일이 없으면 먼저 `scripts/ingest.py --dataset rates` 로 수집해야 한다.
+    """
+    path = rates_path(series, data_dir)
+    if not path.exists():
+        raise FileNotFoundError(f"금리 데이터 파일이 없습니다: {path} — 먼저 ingest 로 수집하세요.")
+    df = pl.read_parquet(path)
+    if start is not None:
+        df = df.filter(pl.col("date") >= _parse(start))
+    if end is not None:
+        df = df.filter(pl.col("date") <= _parse(end))
+    return df

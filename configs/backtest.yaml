@@ -1,0 +1,21 @@
+env: backtest
+live_trading: false
+seed: 42
+data:
+  universe: kospi200
+  start_date: "2015-01-01"
+  end_date: "2024-12-31"
+backtest:
+  initial_capital: 1000000
+  commission_bps: 5.0
+  slippage_bps: 2.0
+  dca:
+    enabled: false
+    amount: 0.0
+    interval_days: 30
+portfolio:
+  # 개인용 기본: 롱온리. 숏/시장중립은 추후 활성화.
+  long_only: true
+  market_neutral: false
+  gross_exposure: 1.0
+  max_weight: 0.1

@@ -1,0 +1,4 @@
+name: quant
+type: duckdb
+options:
+  filename: ":memory:"
