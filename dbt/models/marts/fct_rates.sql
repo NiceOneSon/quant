@@ -10,3 +10,4 @@ select
     date,
     rate
 from {{ ref('int_rates_enriched') }}
+order by sk_dim_rate_series, date

@@ -11,5 +11,7 @@ select
     label,
     unit,
     country,
-    category
+    category,
+    source
 from {{ ref('macro_series') }}
+order by category, series

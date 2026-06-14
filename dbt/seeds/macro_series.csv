@@ -19,8 +19,8 @@ MYAGM2KRM189N,한국 M2,billion KRW,KR,macro,fred
 DCOILWTICO,WTI 원유가,USD/bbl,NA,commodity,fred
 DHHNGSP,천연가스,USD/MMBtu,NA,commodity,fred
 PCOPPUSDM,구리 현물가,USD/MT,NA,commodity,fred
-GOLDAMGBD228NLBM,금,USD/troy oz,NA,commodity,fred
-SLVPRUSD,은,USD/troy oz,NA,commodity,fred
+Gold,금 (LBMA 오후가),USD/troy oz,NA,commodity,fdr
+SLV,은 ETF (iShares SLV),USD,NA,commodity,fdr
 KS11,KOSPI 지수,point,KR,index,fdr
 KS200,KOSPI200 지수,point,KR,index,fdr
 KQ11,KOSDAQ 지수,point,KR,index,fdr

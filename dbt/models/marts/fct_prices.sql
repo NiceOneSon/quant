@@ -29,3 +29,4 @@ select
     is_halted,
     is_member_asof
 from base
+order by universe, symbol, date

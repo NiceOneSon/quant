@@ -10,3 +10,4 @@ select
     date,
     value
 from {{ ref('stg_macro') }}
+order by sk_dim_macro_series, date

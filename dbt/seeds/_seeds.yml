@@ -1,0 +1,93 @@
+version: 2
+
+seeds:
+  - name: macro_series
+    description: >
+      매크로/FX/원자재/지수/크레딧/변동성 시리즈 마스터.
+      source 컬럼으로 ingest.py 배치 수집 소스(fdr/fred)를 지정한다.
+      새 시리즈 추가 시 이 파일과 data_layer/ingest.py 배치 실행만으로 반영된다.
+    columns:
+      - name: series
+        description: >
+          수집 시 사용하는 시리즈 코드.
+          FDR: FX는 'USD/KRW' 형식, 지수는 'KS11', ETF/원자재는 'VIX'·'Gold'·'SLV'.
+          FRED: 'BAMLH0A0HYM2EY' 형식 (FRED 공식 시리즈 코드).
+      - name: label
+        description: "사람이 읽을 수 있는 시리즈 이름. Evidence 드롭다운·차트 범례에 표시."
+      - name: unit
+        description: "값의 단위. fct_macro.value 해석에 사용 (KRW / % / point / USD/bbl 등)."
+      - name: country
+        description: "데이터가 대표하는 국가(KR/US/JP/CN/EU/NA). NA = 글로벌 원자재 등."
+      - name: category
+        description: >
+          시리즈 분류.
+          - fx: 환율 (USD/KRW, EUR/USD, ...)
+          - macro: 거시경제 지표 (CPI, PCE, NFP, M2, ...)
+          - commodity: 원자재 (WTI, 구리, 금, 천연가스, ...)
+          - index: 주가지수 (KOSPI, KOSPI200, KOSDAQ)
+          - credit: 크레딧 스프레드 (HY OAS, IG OAS)
+          - volatility: 변동성 지수 (VIX)
+      - name: source
+        description: >
+          수집 소스. ingest.py 배치 모드에서 이 값을 읽어 FDR/FRED 중 선택.
+          - fdr: FinanceDataReader (FX, 지수, ETF, 현물가격)
+          - fred: FRED via FDR wrapper (미국 연준·정부 공식 통계)
+
+    # 시리즈별 출처 메모 (로우 단위 description은 dbt seed에서 미지원 → 여기서 문서화)
+    meta:
+      row_sources:
+        # ── FX ──────────────────────────────────────────────────────────────
+        USD/KRW:    "FDR / Yahoo Finance — 달러-원 현물 환율"
+        USD/JPY:    "FDR / Yahoo Finance — 달러-엔 현물 환율"
+        EUR/USD:    "FDR / Yahoo Finance — 유로-달러 현물 환율"
+        USD/CNY:    "FDR / Yahoo Finance — 달러-위안 현물 환율"
+        # ── 달러인덱스 ───────────────────────────────────────────────────────
+        DTWEXBGS:   "FRED — 무역가중 달러인덱스(Broad, Goods & Services). DXY 대체지표"
+        # ── 변동성 ───────────────────────────────────────────────────────────
+        VIX:        "FDR / Yahoo Finance (^VIX) — CBOE 변동성 지수(S&P500 30일 내재변동성)"
+        # ── 크레딧 스프레드 ──────────────────────────────────────────────────
+        BAMLH0A0HYM2EY: "FRED — ICE BofA US 하이일드 OAS(Option-Adjusted Spread), 일별"
+        BAMLC0A0CM:     "FRED — ICE BofA US 투자등급 OAS, 일별"
+        # ── 인플레이션 / 매크로 지표 ────────────────────────────────────────
+        CPIAUCSL:   "FRED — 미국 CPI All Urban Consumers(SA), 월별"
+        PCEPI:      "FRED — 미국 PCE Price Index(SA), 월별"
+        T10YIE:     "FRED — 미국 10년 손익분기 기대인플레이션(10-Year Breakeven), 일별"
+        T5YIFR:     "FRED — 미국 5y5y Forward Breakeven Inflation Rate, 일별"
+        PAYEMS:     "FRED — 미국 비농업 고용(NFP, 전체 민간+정부), 월별"
+        ICSA:       "FRED — 미국 주간 실업수당 신규청구(Initial Claims), 주별"
+        # ── 통화량 / 연준 ─────────────────────────────────────────────────────
+        M2SL:       "FRED — 미국 M2 통화량(SA, 십억 달러), 월별"
+        WALCL:      "FRED — 연준 대차대조표 총자산(H.4.1), 주별"
+        MYAGM2KRM189N: "FRED — 한국 M2(SA, 십억 원), 월별"
+        # ── 원자재 ───────────────────────────────────────────────────────────
+        DCOILWTICO: "FRED — WTI 원유 현물가(쿠싱, 오클라호마), 일별"
+        DHHNGSP:    "FRED — 천연가스 현물가(헨리허브), 일별"
+        PCOPPUSDM:  "FRED — 구리 현물가(LME), 월별"
+        Gold:       "FDR / Yahoo Finance (GC=F) — LBMA 금 오후가 close, 일별"
+        SLV:        "FDR / Yahoo Finance — iShares Silver Trust ETF close (은 가격 proxy), 일별"
+        # ── 국내 지수 ─────────────────────────────────────────────────────────
+        KS11:       "FDR / Yahoo Finance (^KS11) — KOSPI 지수, 일별"
+        KS200:      "FDR / Yahoo Finance (^KS200) — KOSPI200 지수, 일별"
+        KQ11:       "FDR / Yahoo Finance (^KQ11) — KOSDAQ 지수, 일별"
+
+  - name: rate_series
+    description: >
+      금리 시리즈 마스터. 모두 FRED(FDR wrapper) 소스.
+      새 시리즈 추가 시 이 파일에 행 추가 + `ingest.py --dataset rates` 배치 실행.
+    columns:
+      - name: series
+        description: "FRED 시리즈 코드. rates 디렉터리에 <series>.parquet 으로 저장."
+      - name: country
+        description: "국가(KR/US)."
+      - name: label
+        description: "사람용 라벨. Evidence 차트·드롭다운에 표시."
+      - name: tenor
+        description: "만기 구분(O/N / 3M / 2Y / 10Y 등). 수익률 곡선 정렬에 사용."
+    meta:
+      row_sources:
+        IR3TIB01KRM156N: "FRED — 한국 3개월 은행간 금리(CD 91일, 월별). 국내 무위험금리 proxy"
+        DGS3MO:          "FRED — 미국 3개월 국채 수익률(시장 수익률, 일별)"
+        DGS2:            "FRED — 미국 2년 국채 수익률(일별)"
+        DGS10:           "FRED — 미국 10년 국채 수익률(일별). 장기 무위험금리 기준"
+        DFF:             "FRED — 미국 연방기금금리 실효 금리(일별). FOMC 정책금리"
+        SOFR:            "FRED — SOFR (Secured Overnight Financing Rate, 일별). LIBOR 대체 기준금리"

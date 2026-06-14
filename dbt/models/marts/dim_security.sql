@@ -11,3 +11,4 @@ select
     name,
     market
 from {{ ref('stg_securities') }}
+order by symbol

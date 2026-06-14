@@ -8,6 +8,9 @@ from data_layer.fred_source import FredRateSource
 from data_layer.ingest import ingest_rates
 from data_layer.rates import RAW_RATE_SCHEMA, load_rates, rates_path
 
+_SK_DGS10 = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"  # fake hash for DGS10
+_SK_DFF = "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5"      # fake hash for DFF
+
 
 def _fake_read(series: str, start: date, end: date) -> pl.DataFrame:
     return pl.DataFrame(
@@ -45,12 +48,24 @@ def test_ingest_sorts_by_date(tmp_path: Path) -> None:
 
 
 def _write_rates_mart(marts: Path) -> None:
+    """fct_rates + dim_rate_series 마트 mock. 스타 스키마: fct 에 series 없음."""
     marts.mkdir(parents=True, exist_ok=True)
+    # dim_rate_series: 메타
     pl.DataFrame(
         {
+            "sk_id": [_SK_DGS10, _SK_DFF],
+            "series": ["DGS10", "DFF"],
+            "country": ["US", "US"],
+            "label": ["미국채 10년", "미 연방기금금리"],
+            "tenor": ["10Y", "O/N"],
+        }
+    ).write_parquet(marts / "dim_rate_series.parquet")
+    # fct_rates: SK + rate 만
+    pl.DataFrame(
+        {
+            "sk_id": ["h1", "h2", "h3"],
+            "sk_dim_rate_series": [_SK_DGS10, _SK_DGS10, _SK_DFF],
             "date": [date(2024, 1, 1), date(2024, 2, 1), date(2024, 1, 1)],
-            "series": ["DGS10", "DGS10", "DFF"],
-            "country": ["US", "US", "US"],
             "rate": [4.0, 4.1, 5.3],
         }
     ).write_parquet(marts / "fct_rates.parquet")
@@ -63,6 +78,7 @@ def test_load_rates_filters_series_and_dates(tmp_path: Path) -> None:
     df = load_rates("DGS10", marts_dir=marts)
     assert set(df["series"].to_list()) == {"DGS10"}
     assert df.height == 2
+    assert "label" in df.columns  # dim join 확인
 
     df2 = load_rates("DGS10", start="2024-02-01", marts_dir=marts)
     assert df2["date"].to_list() == [date(2024, 2, 1)]

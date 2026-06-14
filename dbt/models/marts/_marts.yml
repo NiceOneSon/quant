@@ -1,5 +1,8 @@
 version: 2
 
+# 스키마(description) + 컬럼-레벨 테스트.
+# 테이블-레벨 테스트(expression_is_true, unique_combination_of_columns 등)는 _marts_tests.yml 에 분리.
+
 models:
   # ─────────────────────────────
   # Dimension tables
@@ -10,12 +13,21 @@ models:
     columns:
       - name: sk_id
         description: "서로게이트 키 = hash(symbol). fct_prices.sk_dim_security 가 참조."
+        data_tests: [not_null, unique]
       - name: symbol
         description: "KRX 6자리 상장코드(0패딩 문자열). 자연 키."
+        data_tests:
+          - not_null
+          - unique
       - name: name
         description: "종목명(예: 005930 → 삼성전자)."
+        data_tests: [not_null]
       - name: market
         description: "상장 시장."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["KOSPI", "KOSDAQ", "KONEX", "KOSPI MARKET", "KOSDAQ MARKET", "KOSDAQ GLOBAL"]
 
   - name: dim_universe
     description: >
@@ -24,12 +36,21 @@ models:
     columns:
       - name: sk_id
         description: "서로게이트 키 = hash(universe, symbol, added). 각 편입 구간을 고유 식별."
+        data_tests: [not_null, unique]
       - name: universe
         description: "유니버스 식별자."
+        data_tests: [not_null]
       - name: symbol
         description: "KRX 6자리 상장코드. dim_security 에서 조인해 종목명을 얻는다."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_security')
+                field: symbol
       - name: added
         description: "편입일(구간 시작)."
+        data_tests: [not_null]
       - name: removed
         description: "편출일. null 이면 현재까지 편입 유지."
       - name: is_current
@@ -40,32 +61,55 @@ models:
     columns:
       - name: sk_id
         description: "서로게이트 키 = hash(series)."
+        data_tests: [not_null, unique]
       - name: series
         description: "FRED 시리즈 코드(예: DGS10). 자연 키."
+        data_tests: [not_null, unique]
       - name: country
         description: "국가 구분(KR/US)."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["KR", "US", "NA"]
       - name: label
         description: "사람용 라벨(예: 미국채 10년)."
+        data_tests: [not_null]
       - name: tenor
         description: "만기(3M / 2Y / 10Y / O/N 등)."
+        data_tests: [not_null]
 
   - name: dim_macro_series
     description: "매크로 시리즈 마스터. sk_id = hash(series). fct_macro.sk_dim_macro_series 가 참조."
     columns:
       - name: sk_id
         description: "서로게이트 키 = hash(series)."
+        data_tests: [not_null, unique]
       - name: series
         description: "시리즈 코드(예: USD/KRW, DTWEXBGS). 자연 키."
+        data_tests: [not_null, unique]
       - name: label
         description: "사람용 라벨."
+        data_tests: [not_null]
       - name: unit
         description: "단위(KRW / USD/bbl / point 등)."
+        data_tests: [not_null]
       - name: country
         description: "국가 구분."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["KR", "US", "JP", "CN", "EU", "NA"]
       - name: category
         description: "카테고리(fx/macro/commodity/index/credit/volatility)."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["fx", "macro", "commodity", "index", "credit", "volatility"]
       - name: source
         description: "수집 소스(fdr/fred). ingest.py 배치 모드에서 참조."
+        data_tests: [not_null]
 
   # ─────────────────────────────
   # Fact tables
@@ -74,30 +118,67 @@ models:
   - name: fct_prices
     description: "일별 수정주가 OHLCV. sk_dim_security → dim_security, sk_dim_universe → dim_universe."
     columns:
+      - name: sk_id
+        description: "팩트 행 서로게이트 키 = hash(date, universe, symbol). 중복 감지·다운스트림 조인용."
+        data_tests: [not_null, unique]
       - name: sk_dim_security
         description: "dim_security.sk_id 참조 = hash(symbol). 종목명 조인 키."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_security')
+                field: sk_id
       - name: sk_dim_universe
         description: "dim_universe.sk_id 참조 = hash(universe, symbol, added). 비편입 행은 null."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_universe')
+                field: sk_id
       - name: universe
         description: "유니버스 식별자. 자연 키(필터용)."
+        data_tests: [not_null]
       - name: symbol
         description: "KRX 6자리 상장코드. 자연 키(필터용)."
+        data_tests: [not_null]
       - name: date
         description: "거래일."
+        data_tests: [not_null]
       - name: close
         description: "수정주가 종가(KRW). 항상 양수."
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "> 0"
       - name: open
         description: "수정주가 시가. 거래정지일(is_halted=true)은 0."
+        data_tests:
+          # 거래정지일은 open/high/low=0이 정상.
+          - dbt_utils.expression_is_true:
+              expression: "> 0 or is_halted"
       - name: high
         description: "수정주가 고가. 거래정지일은 0."
+        data_tests:
+          - dbt_utils.expression_is_true:
+              expression: "> 0 or is_halted"
       - name: low
         description: "수정주가 저가. 거래정지일은 0."
+        data_tests:
+          - dbt_utils.expression_is_true:
+              expression: "> 0 or is_halted"
       - name: volume
         description: "거래량(주). 거래정지일은 0."
+        data_tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
       - name: close_raw
         description: "원본(미수정) 종가. 벤더 미제공 시 null."
       - name: is_halted
         description: "거래정지/무거래(volume=0). dbt ELT 파생값."
+        data_tests:
+          - dbt_utils.expression_is_true:
+              expression: "= (volume = 0)"
       - name: is_member_asof
         description: "그 거래일에 해당 유니버스 멤버였는지(PIT). 생존편향 검증용."
 
@@ -105,20 +186,47 @@ models:
     description: >
       금리 측정값. 자연 키(series)는 dim_rate_series 에만 존재 — 여기엔 SK + 측정값만.
     columns:
+      - name: sk_id
+        description: "팩트 행 서로게이트 키 = hash(series, date). 중복 감지·다운스트림 조인용."
+        data_tests: [not_null, unique]
       - name: sk_dim_rate_series
         description: "dim_rate_series.sk_id 참조 = hash(series). 그레인 식별자이자 조인 키."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_rate_series')
+                field: sk_id
       - name: date
         description: "관측일."
+        data_tests: [not_null]
       - name: rate
         description: "연율 퍼센트(예: 3.65 = 3.65%)."
+        data_tests:
+          - not_null
+          # column-level: "rate" 이 prepend → ">= -5 and rate <= 30".
+          - dbt_utils.expression_is_true:
+              expression: ">= -5 and rate <= 30"
 
   - name: fct_macro
     description: >
       매크로/FX/원자재/지수/크레딧/변동성 측정값. 자연 키(series)는 dim_macro_series 에만 존재 — 여기엔 SK + 측정값만.
     columns:
+      - name: sk_id
+        description: "팩트 행 서로게이트 키 = hash(series, date). 중복 감지·다운스트림 조인용."
+        data_tests: [not_null, unique]
       - name: sk_dim_macro_series
         description: "dim_macro_series.sk_id 참조 = hash(series). 그레인 식별자이자 조인 키."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_macro_series')
+                field: sk_id
       - name: date
         description: "관측일."
+        data_tests: [not_null]
       - name: value
         description: "시리즈 값. 단위는 dim_macro_series.unit 참조."
+        data_tests:
+          - not_null

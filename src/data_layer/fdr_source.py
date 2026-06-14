@@ -118,19 +118,21 @@ SeriesReadFn = Callable[[str, date, date], pl.DataFrame]
 
 
 def _fdr_series(series: str, start: date, end: date) -> pl.DataFrame:
-    """FDR 로 FX·지수 시계열을 조회해 date/value 프레임으로 반환한다 (네트워크 격리).
+    """FDR 로 FX·지수·ETF 시계열을 조회해 date/value 프레임으로 반환한다 (네트워크 격리).
 
-    예) 'USD/KRW', 'KS11', 'KS200', 'KQ11'
+    예) 'USD/KRW', 'KS11', 'Gold', 'SLV'
+    OHLCV 응답(Gold, ETF 등)은 Close 컬럼 우선, 없으면 첫 번째 컬럼.
     pl.from_pandas(pyarrow 필요) 대신 리스트 직접 구성 — FX nullable Int64 대응.
     """
     import FinanceDataReader as fdr  # 지연 import: 선택 의존성('data' extra)
 
     pdf = fdr.DataReader(series, start.isoformat(), end.isoformat())
-    if pdf.empty:
+    if pdf is None or pdf.empty:
         return pl.DataFrame(schema={"date": pl.Date(), "value": pl.Float64()})
-    # 인덱스(날짜) → date 리스트, 값 컬럼(Close 등) → float 리스트로 직접 변환.
+    # 인덱스(날짜) → date 리스트; 값은 Close 우선, 없으면 첫 번째 컬럼.
     dates = [d.date() if hasattr(d, "date") else d for d in pdf.index.tolist()]
-    values = [float(v) if v is not None else float("nan") for v in pdf.iloc[:, 0].tolist()]
+    value_col = pdf["Close"] if "Close" in pdf.columns else pdf.iloc[:, 0]
+    values = [float(v) if v is not None else float("nan") for v in value_col.tolist()]
     return pl.DataFrame({"date": dates, "value": values}).with_columns(
         pl.col("date").cast(pl.Date),
         pl.col("value").cast(pl.Float64),

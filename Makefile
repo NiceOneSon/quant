@@ -23,6 +23,7 @@ dbt-test:
 dbt-build:
 	cd $(QUANT_ROOT)/dbt && $(DBT_BIN) build
 	uv run python scripts/gen_duckdb_views.py
+	rm -rf $(QUANT_ROOT)/viz/evidence/.evidence/template/.evidence-queries/cache/
 
 dbt-docs:
 	cd $(QUANT_ROOT)/dbt && $(DBT_BIN) docs generate && $(DBT_BIN) docs serve

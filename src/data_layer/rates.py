@@ -62,14 +62,23 @@ def load_rates(
     *,
     marts_dir: Path | None = None,
 ) -> pl.DataFrame:
-    """dbt 마트(fct_rates)에서 `series` 금리를 조회한다 (date, series, country, label, tenor, rate).
+    """dbt 마트에서 `series` 금리를 조회한다 (date, series, country, label, tenor, rate).
 
-    소비 레이어는 dbt 마트를 읽는다 → 먼저 `dbt build`. start/end 로 구간 필터.
+    fct_rates(SK + rate) JOIN dim_rate_series(메타) → series 필터.
+    start/end 로 구간 필터.
     """
-    path = (marts_dir or default_marts_dir()) / "fct_rates.parquet"
-    if not path.exists():
-        raise FileNotFoundError(f"마트가 없습니다: {path} — dbt build 로 생성하세요(dbt/).")
-    df = pl.read_parquet(path).filter(pl.col("series") == series)
+    d = marts_dir or default_marts_dir()
+    fct_path = d / "fct_rates.parquet"
+    dim_path = d / "dim_rate_series.parquet"
+    for p in (fct_path, dim_path):
+        if not p.exists():
+            raise FileNotFoundError(f"마트가 없습니다: {p} — dbt build 로 생성하세요(dbt/).")
+    fct = pl.read_parquet(fct_path)
+    dim = pl.read_parquet(dim_path)
+    df = (
+        fct.join(dim, left_on="sk_dim_rate_series", right_on="sk_id")
+        .filter(pl.col("series") == series)
+    )
     if start is not None:
         df = df.filter(pl.col("date") >= _parse(start))
     if end is not None:

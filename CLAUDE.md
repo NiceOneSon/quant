@@ -87,6 +87,15 @@ uv run python scripts/ingest.py --config configs/dev.yaml
 - 로깅은 `common.logging` 의 구조화 로거를 쓴다. `print()` 사용 금지.
 - 매직 넘버 금지 — 의미 있는 상수/설정으로.
 
+**dbt Mart 레이어 규칙**
+- 모든 mart 테이블(dim·fct)은 자체 `sk_id = {{ dbt_utils.generate_surrogate_key([...]) }}` 를 **첫 번째 컬럼**으로 갖는다.
+  - dim: `sk_id = hash(자연 키)`. ex) `dim_security.sk_id = hash(symbol)`
+  - fct: `sk_id = hash(그레인 컬럼들)`. ex) `fct_prices.sk_id = hash(date, universe, symbol)`
+- fct 의 dim 참조 FK 는 `sk_dim_<테이블명>` 으로 명명한다. ex) `sk_dim_security`, `sk_dim_rate_series`
+- fct 에 자연 키(series, symbol 등)와 메타(label, category 등)를 넣지 않는다 — dim 에만.
+- 모든 mart parquet 은 `ORDER BY` 로 물리적 정렬을 명시한다. (DuckDB COPY TO 는 SORT 옵션 없음 → SQL ORDER BY 필수)
+- `_marts_tests.yml` 에 `sk_id: [not_null, unique]` 를 반드시 포함한다.
+
 ---
 
 ## 6. ⚠️ 퀀트 도메인 안전장치 (가장 중요)

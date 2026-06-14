@@ -18,3 +18,4 @@ select
     removed,
     is_current
 from base
+order by universe, symbol, added

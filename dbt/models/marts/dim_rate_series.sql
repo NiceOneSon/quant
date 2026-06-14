@@ -12,3 +12,4 @@ select
     label,
     tenor
 from {{ ref('rate_series') }}
+order by country, tenor
