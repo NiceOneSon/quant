@@ -1,11 +1,83 @@
 version: 2
 
+# intermediate 레이어 — ephemeral 로 mart 에 인라인.
+# 조인·PIT 로직만 담당. 직접 노출하지 않음(외부 parquet 없음).
+
 models:
   - name: int_universe_membership
-    description: "유니버스 멤버십 구간(+ is_current). dim_universe 의 소스."
+    description: >
+      stg_universe 에 is_current 파생 컬럼을 추가한 뷰.
+      dim_universe 의 직접 소스.
+    columns:
+      - name: universe
+        description: "유니버스 식별자."
+        data_tests: [not_null]
+      - name: symbol
+        description: "KRX 6자리 상장코드."
+        data_tests: [not_null]
+      - name: added
+        description: "편입일(구간 시작). [added, removed) 반개구간."
+        data_tests: [not_null]
+      - name: removed
+        description: "편출일. null 이면 현재까지 편입 유지."
+      - name: is_current
+        description: "removed is null 로 파생. dim_universe 에서 현재 편입 여부 빠른 필터용."
+        data_tests: [not_null]
+
   - name: int_rates_enriched
-    description: "금리 시리즈에 seed(rate_series) 라벨·만기를 조인. fct_rates 의 소스."
+    description: >
+      stg_rates(date, series, rate) 에서 그대로 통과.
+      label·tenor·country 는 fct_rates → dim_rate_series 조인에서 파생하므로 여기선 붙이지 않음.
+      fct_rates 의 직접 소스.
+    columns:
+      - name: date
+        description: "관측일."
+        data_tests: [not_null]
+      - name: series
+        description: "FRED 시리즈 코드. fct_rates 에서 hash(series) → sk_dim_rate_series 로 변환."
+        data_tests: [not_null]
+      - name: rate
+        description: "연율 퍼센트(예: 3.65 = 3.65%)."
+        data_tests: [not_null]
+
   - name: int_prices_pit
     description: >
-      가격 × 유니버스 멤버십 as-of 조인. is_member_asof 로 그 시점 편입 여부 플래그.
-      fct_prices 의 소스. (ephemeral — 마트에 인라인)
+      stg_prices × int_universe_membership AS-OF 조인.
+      is_member_asof: 해당 거래일에 그 유니버스 멤버였는지 — 생존편향 없는 필터 기준.
+      _membership_added: fct_prices 에서 sk_dim_universe 해시 계산용 내부 컬럼(소비자 비노출).
+      fct_prices 의 직접 소스.
+    columns:
+      - name: universe
+        description: "유니버스 식별자."
+        data_tests: [not_null]
+      - name: symbol
+        description: "KRX 6자리 상장코드."
+        data_tests: [not_null]
+      - name: date
+        description: "거래일."
+        data_tests: [not_null]
+      - name: open
+        description: "수정주가 시가(KRW). 거래정지일은 0."
+      - name: high
+        description: "수정주가 고가(KRW). 거래정지일은 0."
+      - name: low
+        description: "수정주가 저가(KRW). 거래정지일은 0."
+      - name: close
+        description: "수정주가 종가(KRW). 항상 양수."
+        data_tests: [not_null]
+      - name: volume
+        description: "거래량(주). 거래정지일은 0."
+      - name: close_raw
+        description: "원본(미수정) 종가. FDR 소스는 항상 null."
+      - name: is_halted
+        description: "거래정지 여부. stg_prices 에서 (volume = 0) 으로 파생."
+        data_tests: [not_null]
+      - name: is_member_asof
+        description: >
+          해당 거래일에 그 유니버스 편입 멤버였는지(PIT).
+          left join 결과: 편입 구간 내 → true, 비편입/공백 기간 → false.
+        data_tests: [not_null]
+      - name: _membership_added
+        description: >
+          편입 구간의 added 날짜. fct_prices 에서 sk_dim_universe = hash(universe, symbol, _added_str)
+          계산에만 사용. 소비자에게 노출하지 않음(접두사 _ 규약).

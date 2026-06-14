@@ -48,7 +48,8 @@
       "Bash(docker restart *)",
       "Bash(make dbt-build *)",
       "Bash(.venv/bin/dbt seed *)",
-      "Bash(.venv/bin/dbt clean *)"
+      "Bash(.venv/bin/dbt clean *)",
+      "Bash(.venv/bin/dbt compile *)"
     ]
   }
 }
