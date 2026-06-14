@@ -271,5 +271,58 @@ models:
                 field: sk_id
       - name: date
         data_tests: [not_null]
+      # ── Raw 팩터 ──────────────────────────────────────────────
+      - name: mom_1m
+        description: "1개월 모멘텀: close / p_1m - 1 (소수, 예: 0.05 = 5%)."
+      - name: mom_6m
+        description: "6개월 모멘텀: close / p_6m - 1."
+      - name: mom_12_1m
+        description: "표준 12-1M 모멘텀: p_1m / p_12m - 1. 최근 1개월 제외로 단기 반전 제거."
+      - name: rev_1w
+        description: "1주 수익률: close / p_5d - 1. 단기 반전 시그널."
+      - name: hi52w_ratio
+        description: "52주 최고가 대비 현재가: close / max(close, 252d). 1에 가까울수록 신고가 근처."
+      - name: vol_1m
+        description: "실현변동성 21일: 일간수익률 표준편차."
+      - name: vol_3m
+        description: "실현변동성 63일."
+      - name: beta_1y
+        description: "KOSPI 대비 252일 베타 (OLS slope). 1보다 크면 시장보다 민감."
+      - name: idio_vol_1m
+        description: "특이변동성 21일: sqrt(var(ret) - β²·var(kospi)). 종목 고유 리스크."
+      - name: adv_20d
+        description: "거래대금 20일 평균 (KRW, volume×close 근사). 유동성 대리변수."
+      - name: vol_surge
+        description: "거래대금 급등: adv_5d / adv_20d. 1보다 크면 최근 거래 급증."
+      # ── CS rank (0~1, 항상 높을수록 유리) ────────────────────
+      - name: mom_12_1m_rank
+        description: "mom_12_1m 의 CS rank. 모멘텀 강할수록 높음."
+      - name: mom_6m_rank
+        description: "mom_6m 의 CS rank."
+      - name: mom_1m_rank
+        description: "mom_1m 의 CS rank."
+      - name: rev_1w_rank
+        description: "rev_1w 의 CS rank. 현재 모멘텀 방향 유지 (반전 전략 시 1-rank 사용)."
+      - name: hi52w_ratio_rank
+        description: "hi52w_ratio 의 CS rank."
+      - name: vol_1m_rank
+        description: "vol_1m 의 역 CS rank (1 - percent_rank). 변동성 낮을수록 높음."
+      - name: vol_3m_rank
+        description: "vol_3m 의 역 CS rank."
+      - name: beta_1y_rank
+        description: "beta_1y 의 역 CS rank. 베타 낮을수록 높음."
+      - name: idio_vol_rank
+        description: "idio_vol_1m 의 역 CS rank. 특이변동성 낮을수록 높음."
+      - name: adv_20d_rank
+        description: "adv_20d 의 CS rank. 거래대금 클수록 높음."
+      - name: vol_surge_rank
+        description: "vol_surge 의 CS rank."
+      # ── Family / composite score ───────────────────────────────
+      - name: score_mom
+        description: "모멘텀 패밀리 score: (mom_12_1m + mom_6m + rev_1w + hi52w_ratio rank) / 4."
+      - name: score_lowvol
+        description: "저변동성 패밀리 score: (vol_1m + beta_1y + idio_vol rank) / 3."
+      - name: score_liq
+        description: "유동성 패밀리 score: (adv_20d + vol_surge rank) / 2."
       - name: score_composite
-        description: "family score 단순평균. 높을수록 복합 팩터 우위."
+        description: "패밀리 score 단순평균: (mom + lowvol + liq) / 3. 리밸런싱 상위 N종목 선정 기준."
