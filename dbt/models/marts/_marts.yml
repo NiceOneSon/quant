@@ -54,15 +54,12 @@ models:
 
   - name: dim_universe_history
     description: >
-      SCD2 유니버스 히스토리 차원. dim_universe(편입 구간 전용)의 확장판으로,
-      갭 구간(is_member=false)을 추가해 (universe, symbol) 쌍의 전체 타임라인을 빈틈없이 커버.
-      fct_prices.sk_dim_universe_history 가 범위 조인(valid_from ≤ date < valid_to)으로 참조.
+      유니버스 멤버십 이력 차원. (universe, symbol)별 편입·편출 구간을 보관.
+      valid_to=null 이면 현재 편입 중. 편입 전 가격(fct_prices)은 null FK 허용.
       sk_id = hash(universe, symbol, valid_from).
     columns:
       - name: sk_id
-        description: >
-          서로게이트 키 = hash(universe, symbol, valid_from).
-          멤버십 구간은 dim_universe.sk_id(= hash(universe, symbol, added))와 동일값.
+        description: "서로게이트 키 = hash(universe, symbol, valid_from)."
         data_tests: [not_null, unique]
       - name: universe
         description: "유니버스 식별자."
@@ -79,15 +76,12 @@ models:
         description: "종목명. dim_security.name 조인값 (예: 005930 → 삼성전자)."
         data_tests: [not_null]
       - name: valid_from
-        description: "구간 시작일(포함). 갭 구간은 sentinel 1900-01-01."
+        description: "편입 시작일(포함)."
         data_tests: [not_null]
       - name: valid_to
-        description: "구간 종료일(미포함). null 이면 현재 활성 편입 구간."
-      - name: is_member
-        description: "true = 실제 편입 구간, false = 갭(편입 전·재편입 공백)."
-        data_tests: [not_null]
+        description: "편출일(미포함). null 이면 현재 편입 중."
       - name: is_current
-        description: "is_member=true AND valid_to is null 인 현재 편입 종목."
+        description: "valid_to is null 인 현재 편입 종목."
 
   - name: dim_macro_series
     description: "매크로 시리즈 마스터. sk_id = hash(series). fct_macro.sk_dim_macro_series 가 참조."

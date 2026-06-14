@@ -11,7 +11,7 @@ join quant.universe u on p.sk_dim_universe_history = u.sk_id
 order by u.universe
 ```
 
-<Dropdown data={universes} name=univ value=universe label=universe defaultValue="kospi40"/>
+<Dropdown data={universes} name=univ value=universe label=universe/>
 
 ```sql symbols
 select u.symbol, s.name, u.symbol || ' ' || s.name as label
@@ -23,7 +23,7 @@ group by u.symbol, s.name
 order by u.symbol
 ```
 
-<Dropdown data={symbols} name=sym value=symbol label=label defaultValue="005930"/>
+<Dropdown data={symbols} name=sym value=symbol label=label/>
 
 ```sql series
 select p.date, p.open, p.high, p.low, p.close, p.volume, p.is_halted

@@ -43,6 +43,63 @@ dbt docs generate --profiles-dir . && dbt docs serve  # 데이터 사전·리니
 - DAG 에서 env 만 주입: `QUANT_DATA_DIR`, `QUANT_MARTS_DIR`, `DBT_DUCKDB_PATH`.
 - Cosmos / BashOperator(`dbt build`) 등 어느 방식이든 프로젝트 변경 불필요.
 
+## 레이어 구조
+
+> **핵심 철학**: 원천 데이터에서 멀어질수록 비즈니스 의미에 가까워진다.
+> 각 레이어를 책임 단위로 분리해 변경의 파급 범위를 통제하는 것이 목적이다.
+
+흐름: `raw → staging → intermediate → mart` (단방향)
+
+### Raw (소스)
+
+dbt가 변환하는 레이어가 아닌 **변환의 시작점**. `source()`로 선언만 하고 가공하지 않는다.
+
+- 소스 스키마가 바뀌어도 staging만 고치면 되는 **격리막** 역할
+- 의존성 추적(lineage)과 freshness 테스트의 기준점
+
+### Staging
+
+**소스 1:1 정제 레이어.** raw 테이블 하나당 staging 모델 하나가 대응.
+
+- 하는 일: 컬럼명 표준화, 타입 캐스팅, 단순 변환, null 처리
+- 하지 않는 일: 조인, 집계
+- "이 다음부터 모든 모델은 깨끗하고 일관된 데이터를 받는다"는 보장
+- 보통 view 또는 ephemeral로 가볍게 둔다
+
+### Intermediate
+
+**복잡한 비즈니스 로직을 잘게 쪼개 재사용하는 중간 작업대.**
+
+- 존재 이유: 가독성(mart를 단일 거대 쿼리로 만들지 않음), 재사용(여러 mart가 공유하는 중간 계산), 복잡도 격리(fan-out 조인·다단계 집계)
+- 외부(BI, 분석가)에 **노출하지 않음** — 순수하게 mart를 만들기 위한 내부 부품
+
+### Mart
+
+**최종 소비자(분석가, BI, 대시보드)가 직접 쓰는 비즈니스 산출물.**
+
+- 비즈니스 도메인 단위로 구성, fact + dimension 형태
+- 기준: "비즈니스 질문에 바로 답할 수 있는가"
+- 성능을 위해 보통 table 또는 incremental로 materialize
+
+### 빠른 판단 기준
+
+| 상황 | 레이어 |
+|---|---|
+| 컬럼명/타입만 정리 | staging |
+| 조인·집계가 들어가지만 최종 산출물은 아님 | intermediate |
+| 분석가가 바로 쿼리할 결과물 | mart |
+| 가공 없이 원본 참조만 | source (raw) |
+
+**변경의 이유가 다른 것들을 다른 레이어에 둔다.**
+
+| 변경 종류 | 흡수되는 위치 |
+|---|---|
+| 소스 스키마 변경 | staging |
+| 비즈니스 로직 변경 | intermediate / mart |
+| 소비자 관점 변경 | mart만 신경 씀 |
+
+---
+
 ## 스키마 (raw → staging → intermediate → marts)
 
 ### 소스 (`source('raw')`)
@@ -58,9 +115,7 @@ dbt docs generate --profiles-dir . && dbt docs serve  # 데이터 사전·리니
 
 | 모델 | 역할 |
 |---|---|
-| `int_universe_membership` | stg_universe + is_current 파생 |
-| `int_universe_history` | SCD2 타임라인 구간 생성 (멤버십 + 갭) |
-| `int_prices_pit` | stg_prices × int_universe_membership AS-OF 조인 |
+| `int_prices_pit` | stg_prices × stg_universe AS-OF 조인. `is_member_asof`, `_membership_added` 파생. |
 | `int_rates_enriched` | stg_rates 통과 (label·tenor 는 dim 조인에서 파생) |
 
 ### 마트 (external parquet → `data/marts/`)
@@ -68,7 +123,7 @@ dbt docs generate --profiles-dir . && dbt docs serve  # 데이터 사전·리니
 | 테이블 | sk_id | 컬럼 | FK |
 |---|---|---|---|
 | `dim_security` | `hash(symbol)` | symbol, name, market | — |
-| `dim_universe_history` | `hash(universe, symbol, valid_from)` | universe, symbol, valid_from, valid_to, is_member, is_current | → dim_security |
+| `dim_universe_history` | `hash(universe, symbol, valid_from)` | universe, symbol, name, valid_from, valid_to, is_current | → dim_security |
 | `dim_rate_series` | `hash(series)` | series, country, label, tenor | — |
 | `dim_macro_series` | `hash(series)` | series, label, unit, country, category, source | — |
 | `fct_prices` | `hash(date, universe, symbol)` | date, OHLCV, close_raw, is_halted, is_member_asof | → sk_dim_security, sk_dim_universe_history |
@@ -78,8 +133,7 @@ dbt docs generate --profiles-dir . && dbt docs serve  # 데이터 사전·리니
 **설계 원칙**:
 - **정규화**: label/name/unit 등 속성은 dim 테이블에만. fct 는 측정값 + FK 만.
 - **서로게이트 키**: dim → `sk_id`, fct FK → `sk_dim_<테이블명>`.
-- **SCD2 (dim_universe_history)**: 멤버십 구간(`is_member=true`) + 갭 구간(`is_member=false`)으로 전체 타임라인 커버. `fct_prices.sk_dim_universe_history` 는 항상 non-null.
-  - 갭 구간 valid_from sentinel: `1900-01-01` (편입 전 가격 행을 항상 포함).
+- **dim_universe_history**: `valid_to=null` 이면 현재 편입 중. fct_prices의 `sk_dim_universe_history` 는 편입 전 가격에 한해 null 허용.
 - `is_halted = (volume = 0)` — staging 에서 파생 (Python raw 에는 없음).
 
 ### seeds
@@ -91,7 +145,7 @@ dbt docs generate --profiles-dir . && dbt docs serve  # 데이터 사전·리니
 
 `macro_series.csv` 카테고리: `fx` · `macro` · `commodity` · `index` · `credit` · `volatility` · `trade`
 
-## 테스트 (`dbt build` = PASS 92)
+## 테스트 (`dbt build` = PASS 87)
 
 - **not_null / unique**: 모든 dim.sk_id, fct.sk_id, fct.sk_dim_* (non-null 보장)
 - **accepted_values**: market, country, category

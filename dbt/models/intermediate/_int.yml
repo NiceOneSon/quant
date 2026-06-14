@@ -4,26 +4,6 @@ version: 2
 # 조인·PIT 로직만 담당. 직접 노출하지 않음(외부 parquet 없음).
 
 models:
-  - name: int_universe_membership
-    description: >
-      stg_universe 에 is_current 파생 컬럼을 추가한 뷰.
-      dim_universe 의 직접 소스.
-    columns:
-      - name: universe
-        description: "유니버스 식별자."
-        data_tests: [not_null]
-      - name: symbol
-        description: "KRX 6자리 상장코드."
-        data_tests: [not_null]
-      - name: added
-        description: "편입일(구간 시작). [added, removed) 반개구간."
-        data_tests: [not_null]
-      - name: removed
-        description: "편출일. null 이면 현재까지 편입 유지."
-      - name: is_current
-        description: "removed is null 로 파생. dim_universe 에서 현재 편입 여부 빠른 필터용."
-        data_tests: [not_null]
-
   - name: int_rates_enriched
     description: >
       stg_rates(date, series, rate) 에서 그대로 통과.
@@ -42,9 +22,9 @@ models:
 
   - name: int_prices_pit
     description: >
-      stg_prices × int_universe_membership AS-OF 조인.
-      is_member_asof: 해당 거래일에 그 유니버스 멤버였는지 — 생존편향 없는 필터 기준.
-      _membership_added: fct_prices 에서 sk_dim_universe 해시 계산용 내부 컬럼(소비자 비노출).
+      stg_prices × stg_universe AS-OF 조인.
+      is_member_asof: 해당 거래일에 그 유니버스 편입 멤버였는지 — 생존편향 없는 필터 기준.
+      _membership_added: 편입일(added). fct_prices 에서 sk_dim_universe_history 해시 계산용(소비자 비노출).
       fct_prices 의 직접 소스.
     columns:
       - name: universe
@@ -78,29 +58,4 @@ models:
           left join 결과: 편입 구간 내 → true, 비편입/공백 기간 → false.
         data_tests: [not_null]
       - name: _membership_added
-        description: >
-          편입 구간의 added 날짜. (레거시 내부 컬럼 — fct_prices 가 sk_dim_universe_history 로
-          전환된 이후 실제로는 소비되지 않음. 접두사 _ 규약.)
-
-  - name: int_universe_history
-    description: >
-      SCD2 유니버스 타임라인 구간 생성 소스.
-      멤버십 구간(is_member=true) + 편입 전 갭(is_member=false) + 재편입 갭(is_member=false)을
-      합쳐 (universe, symbol) 쌍의 전체 날짜 범위를 빈틈없이 커버한다.
-      dim_universe_history 의 직접 소스.
-    columns:
-      - name: universe
-        description: "유니버스 식별자."
-        data_tests: [not_null]
-      - name: symbol
-        description: "KRX 6자리 상장코드."
-        data_tests: [not_null]
-      - name: valid_from
-        description: >
-          구간 시작일(포함). 편입 전 갭은 sentinel 값 1900-01-01 사용.
-        data_tests: [not_null]
-      - name: valid_to
-        description: "구간 종료일(미포함). null 이면 현재 활성."
-      - name: is_member
-        description: "true = 실제 편입 구간, false = 갭(편입 전·재편입 공백)."
-        data_tests: [not_null]
+        description: "stg_universe.added. sk_dim_universe_history 해시 계산용 내부 컬럼."
