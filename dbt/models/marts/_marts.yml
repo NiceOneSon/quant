@@ -150,7 +150,9 @@ models:
   # ─────────────────────────────
 
   - name: fct_prices
-    description: "일별 수정주가 OHLCV. sk_dim_security → dim_security, sk_dim_universe → dim_universe."
+    description: >
+      일별 수정주가 OHLCV. sk_dim_security → dim_security, sk_dim_universe_history → dim_universe_history.
+      편입·비편입 모든 행에 non-null SK 보장 (SCD2 갭 구간으로 커버).
     columns:
       - name: sk_id
         description: "팩트 행 서로게이트 키 = hash(date, universe, symbol). 중복 감지·다운스트림 조인용."
@@ -163,12 +165,16 @@ models:
               arguments:
                 to: ref('dim_security')
                 field: sk_id
-      - name: sk_dim_universe
-        description: "dim_universe.sk_id 참조 = hash(universe, symbol, added). 비편입 행은 null."
+      - name: sk_dim_universe_history
+        description: >
+          dim_universe_history.sk_id 참조 = hash(universe, symbol, valid_from).
+          범위 조인(valid_from ≤ date < valid_to)으로 항상 non-null.
+          is_member=false 구간은 갭 행(편입 전·재편입 공백)을 의미.
         data_tests:
+          - not_null
           - relationships:
               arguments:
-                to: ref('dim_universe')
+                to: ref('dim_universe_history')
                 field: sk_id
       - name: universe
         description: "유니버스 식별자. 자연 키(필터용)."
