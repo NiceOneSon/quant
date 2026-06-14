@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run *)",
+      "WebSearch",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(uv pip *)",
+      "Bash(uv sync *)",
+      "Bash(docker version *)",
+      "Bash(docker compose *)",
+      "Bash(curl -sS -o /dev/null -w \"HTTP %{http_code}, size %{size_download}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -sS http://localhost:3000/)",
+      "Bash(npm run *)",
+      "Bash(echo \"build exit: $?\")",
+      "Read(//tmp/**)",
+      "Bash(grep -vE 'api|_app|favicon|^data$')",
+      "Bash(/usr/bin/curl -sS -o /dev/null -w \"/         -> HTTP %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(/usr/bin/curl -sS -o /dev/null -w \"/prices   -> HTTP %{http_code}\\\\n\" http://localhost:3000/prices)",
+      "Bash(/usr/bin/curl -sS -o /dev/null -w \"/universe -> HTTP %{http_code}\\\\n\" http://localhost:3000/universe)",
+      "Bash(/usr/bin/curl -sS -o /dev/null -w \"/rates    -> HTTP %{http_code}\\\\n\" http://localhost:3000/rates)",
+      "Bash(/usr/bin/curl -sSL -o /dev/null -w \"/prices \\(follow\\) -> HTTP %{http_code}, %{size_download} bytes\\\\n\" http://localhost:3000/prices)"
+    ]
+  }
+}
