@@ -39,7 +39,7 @@ order by f.date
 select f.date, f.value
 from quant.macro f
 join quant.macro_series d on f.sk_dim_macro_series = d.sk_id
-where d.series = 'DTWEXBGS'
+where d.label = '달러인덱스 DXY'
 order by f.date
 ```
 
@@ -53,7 +53,7 @@ order by f.date
 select f.date, f.value
 from quant.macro f
 join quant.macro_series d on f.sk_dim_macro_series = d.sk_id
-where d.series = 'VIX'
+where d.label = 'VIX 변동성 지수'
 order by f.date
 ```
 
@@ -123,7 +123,7 @@ order by f.date
 select f.date, d.label, f.value
 from quant.macro f
 join quant.macro_series d on f.sk_dim_macro_series = d.sk_id
-where d.series in ('CPIAUCSL', 'PCEPI', 'T10YIE', 'T5YIFR')
+where d.category = 'macro' and d.label in ('미국 CPI', '미국 PCE', '미국 10Y 기대인플레이션', '미국 5y5y 기대인플레이션')
 order by f.date
 ```
 
@@ -137,7 +137,7 @@ order by f.date
 select f.date, d.label, d.unit, f.value
 from quant.macro f
 join quant.macro_series d on f.sk_dim_macro_series = d.sk_id
-where d.series in ('PAYEMS', 'ICSA')
+where d.label in ('미국 비농업 고용(NFP)', '미국 실업수당청구')
 order by f.date
 ```
 
@@ -151,7 +151,7 @@ order by f.date
 select f.date, d.label, d.unit, f.value
 from quant.macro f
 join quant.macro_series d on f.sk_dim_macro_series = d.sk_id
-where d.series in ('M2SL', 'WALCL', 'MYAGM2KRM189N')
+where d.label in ('미국 M2', '연준 대차대조표', '한국 M2')
 order by f.date
 ```
 
