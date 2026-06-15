@@ -15,7 +15,7 @@ PAYEMS,미국 비농업 고용(NFP),thousands,US,macro,fred,monthly
 ICSA,미국 실업수당청구,thousands,US,macro,fred,weekly
 M2SL,미국 M2,billion USD,US,macro,fred,monthly
 WALCL,연준 대차대조표,million USD,US,macro,fred,weekly
-DCOILWTICO,WTI 원유가,USD/bbl,NA,commodity,fred,daily
+RWTC,WTI 원유 스팟가,USD/bbl,NA,commodity,eia,daily
 DHHNGSP,천연가스,USD/MMBtu,NA,commodity,fred,daily
 PCOPPUSDM,구리 현물가,USD/MT,NA,commodity,fred,monthly
 Gold,금 (LBMA 오후가),USD/troy oz,NA,commodity,fdr,daily

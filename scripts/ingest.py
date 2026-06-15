@@ -157,12 +157,16 @@ def _ingest_one_macro(config: AppConfig, source_kind: str, series: str) -> None:
         from data_layer.fred_source import FredSeriesSource
 
         source = FredSeriesSource(series=series)
+    elif source_kind == "eia":
+        from data_layer.eia_source import EiaSeriesSource
+
+        source = EiaSeriesSource(series=series)
     elif source_kind == "ecos":
         from data_layer.ecos_source import EcosSeriesSource
 
         source = EcosSeriesSource(series=series)
     else:
-        raise ValueError("매크로는 fdr, fred, ecos 소스만 지원합니다.")
+        raise ValueError("매크로는 fdr, fred, eia, ecos 소스만 지원합니다.")
 
     path = ingest_macro(
         source,
@@ -204,7 +208,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--source",
-        choices=["csv", "pykrx", "fdr", "fred", "ecos"],
+        choices=["csv", "pykrx", "fdr", "fred", "eia", "ecos"],
         default=None,
         help="수집 소스 (macro/rates 단일 시리즈 시 필요; 배치 모드는 seed의 source 컬럼 사용)",
     )
