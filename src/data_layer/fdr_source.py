@@ -23,6 +23,10 @@ FdrReadFn = Callable[[str, date, date], pl.DataFrame]
 ListingFn = Callable[[str], list[str]]
 
 # 유니버스 이름 -> FDR StockListing 시장. FDR 은 KOSPI200 같은 지수는 미지원.
+# Yahoo Finance 원자재 선물 티커 (FdrSeriesSource 에 그대로 전달)
+YAHOO_WTI = "CL=F"     # WTI 원유 근월물 ($/bbl) — 당일 종가, EIA 스팟 대비 수 센트 차이
+YAHOO_BRENT = "BZ=F"   # Brent 원유 근월물 ($/bbl)
+
 _DEFAULT_MARKETS = {"kospi": "KOSPI", "kosdaq": "KOSDAQ", "krx": "KRX"}
 
 _OHLCV_COLS = ["date", "open", "high", "low", "close", "volume"]
