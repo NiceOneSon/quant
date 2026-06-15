@@ -3,13 +3,11 @@
 이 파일은 Claude Code가 매 세션 자동으로 읽는 프로젝트 가이드입니다.
 간결함이 곧 성능입니다 — 불필요한 설명은 넣지 말고, 실제 규칙·명령어·제약만 유지하세요.
 
-> 채워 넣을 곳: `<...>` 로 표시된 항목은 실제 값으로 교체하세요.
-
 ---
 
 ## 1. 프로젝트 개요
 
-`<프로젝트명>` 은 퀀트 투자 시스템입니다. 데이터 수집부터 신호 생성, 포트폴리오 구성,
+이 시스템은 퀀트 투자 시스템입니다. 데이터 수집부터 신호 생성, 포트폴리오 구성,
 주문 집행까지를 **느슨하게 결합된 모듈형 파이프라인**으로 구현합니다.
 
 핵심 원칙:
@@ -49,7 +47,7 @@
 - 언어: Python 3.11+
 - 패키지/가상환경: `uv`
 - 데이터: `polars` 우선, 호환 필요 시 `pandas`. 수치 연산 `numpy`
-- 백테스트: `<vectorbt / 자체 엔진 등>`
+- 백테스트: 자체 벡터화 엔진 (`src/research/`)
 - 설정: `pydantic` + YAML (`configs/`)
 - 테스트: `pytest`, 린트 `ruff`, 타입 `mypy`
 
@@ -212,6 +210,8 @@ cd viz/evidence && npm run sources
 | 실시간 시세 (intraday) | **KIS WebSocket** | 5분봉 수집과 연동 |
 | 프로그램매매 흐름 | **KIS REST 시세분석 계열** | 장기 히스토리·차익/비차익 세부는 약함 |
 | 금리·거시·환율 | **FRED** (FDR 경유) | 안정적, 검증됨 |
+| **WTI 유가 스팟** | **EIA API v2** (`RWTC`) | `EIA_API_KEY` 필요(무료). FRED보다 최대 1주 빠름. `EiaSeriesSource` |
+| **원유 선물 (T+0)** | **Yahoo Finance** (`CL=F`) | `FdrSeriesSource(series=YAHOO_WTI)`. 당일 종가 즉시 사용 |
 | 한국 거시 (CPI 등) | **ECOS** (한국은행) | rate limit 엄격, throttle 필수 |
 | VKOSPI | 네이버 보조 스크래핑 | best-effort, 메인 의존 금지 |
 | 시장 전체 통계 (ADR 등) | 보조 스크래핑 / 유료벤더 | |
@@ -230,8 +230,9 @@ cd viz/evidence && npm run sources
 ### 10-3. 작동 확인된 소스 (그대로 신뢰)
 
 - **FRED 경유**: `IRLTLT01KRM156N` (한국 10Y 국채), `KORCPIALLMINMEI`, 수출입 금액 YoY 정상.
+- **EIA API v2**: `RWTC`(WTI 스팟), `RBRTE`(Brent 스팟) 정상. `EIA_API_KEY` 환경변수 필수. 에너지 스팟가는 최대 ~8일 lag(주말 포함) — freshness 임계값 10일로 설정.
+- **Yahoo Finance (FDR 경유)**: `CL=F`(WTI 선물), `BZ=F`(Brent 선물) 당일 종가 T+0. KOSPI = `^KS11`, KOSDAQ = `^KQ11`. `.KS`/`.KQ` 접미사·`^VKOSPI` = 404. 재시도 금지.
 - **ECOS**: 정상이나 3분간 300회 초과 시 30분 차단(`ERROR-602`). 보수적 throttle 필수.
-- **Yahoo Finance**: KOSPI = `^KS11`, KOSDAQ = `^KQ11`. `.KS`/`.KQ` 접미사·`^VKOSPI` = 404. 재시도 금지.
 
 ### 10-4. 확정된 설계 결정 (사용자 답변 기반)
 
@@ -240,6 +241,7 @@ cd viz/evidence && npm run sources
 - **프로그램매매 용도**: 모델 학습 및 신호용 — 과거 시계열 깊이 확보 필요
 - **저장소**: intraday DB와 EOD daily DB 분리
 - **KIS 인증**: APP_KEY/SECRET 미발급 → 발급 후 `.env` 에서 로드
+- **EIA 인증**: `EIA_API_KEY` 발급 완료 → `.env` 에 등록됨
 
 ### 10-5. 구현 규칙
 
@@ -247,4 +249,5 @@ cd viz/evidence && npm run sources
 - KIS 접근 토큰은 만료 전까지 파일/메모리 캐시 재사용. 매 호출 재발급 금지.
 - 비공식 스크래핑(네이버 등)은 별도 모듈로 격리. 실패해도 전체 파이프라인 중단 금지.
 - 멱등성: 재실행 시 중복 적재 방지 (upsert 또는 기간 체크).
-- KIS APP_KEY / ECOS KEY / 계좌번호는 환경변수 또는 `.env` 에서만 로드. 코드 하드코딩 금지.
+- KIS APP_KEY / ECOS KEY / EIA_API_KEY / 계좌번호는 환경변수 또는 `.env` 에서만 로드. 코드 하드코딩 금지.
+- WTI 유가 파이프라인: 스팟 확정가 → `EiaSeriesSource(series=EIA_WTI)` / 당일 신호 → `FdrSeriesSource(series=YAHOO_WTI)`. FRED `DCOILWTICO`는 사용 중단(EIA보다 느림).
